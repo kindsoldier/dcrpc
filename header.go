@@ -56,7 +56,7 @@ func (this *Header) Pack() ([]byte, error) {
     magicCodeBBytes := encoderI64(this.magicCodeB)
     headerBuffer.Write(magicCodeBBytes)
 
-    return headerBuffer.Bytes(), err
+    return headerBuffer.Bytes(), Err(err)
 }
 
 func UnpackHeader(headerBytes []byte) (*Header, error) {
@@ -81,10 +81,10 @@ func UnpackHeader(headerBytes []byte) (*Header, error) {
     header.magicCodeB = decoderI64(magicCodeBBytes)
 
     if header.magicCodeA != magicCodeA || header.magicCodeB != magicCodeB {
-        return header, errors.New("wrong protocol magic code")
+        err = errors.New("wrong protocol magic code")
+        return header, Err(err)
     }
-
-    return header, err
+    return header, Err(err)
 }
 
 func encoderI64(i int64) []byte {

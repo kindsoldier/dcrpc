@@ -4,21 +4,20 @@ DSRPC is easy and simple RPC framework over TCP socket.
 
 ### Purpose
 
-A very easy and open RPC framework with data streaming. 
+A very easy and open RPC framework with data streaming.
 
+### You can
 
-### You can 
-
-- Use post and pre-execution middleware
+- Use own post and pre-execution middleware
 - Hash-based authentication in middleware
-- Test call remote function without service organization
+- Test remote function without network
 
-Socket encryption is not used at this time since framefork 
-is oriented to transfer large amounts of data
+Socket encryption is not used at this time since framefork
+is oriented to transfer large amounts of data.
 
-Style of the framework is similar to that of GIN framework.
+Style of the framework is similar of GIN framework.
 
-## Example
+## Exec method example
 
 ### Server
 
@@ -135,7 +134,7 @@ package api
 const HelloMethod string = "hello"
 
 type HelloParams struct {
-    Message string      `msgpack:"message" json:"message"`
+    Message string      `json:"message"`
 }
 
 func NewHelloParams() *HelloParams {
@@ -143,11 +142,204 @@ func NewHelloParams() *HelloParams {
 }
 
 type HelloResult struct {
-    Message string      `msgpack:"message" json:"message"`
+    Message string      `json:"message"`
 }
 
 func NewHelloResult() *HelloResult {
     return &HelloResult{}
+}
+
+```
+
+### Authentication and authorization
+
+#### Client side
+
+```
+
+func clientHello() error {
+    var err error
+
+    params := NewHelloParams()
+    params.Message = "hello server!"
+    result := NewHelloResult()
+
+    auth := dsrpc.CreateAuth([]byte("login"), []byte("password"))
+
+    err = dsrpc.Exec("127.0.0.1:8081", HelloMethod, params, result, auth)
+    if err != nil {
+        log.Println("method err:", err)
+        return err
+    }
+
+    //...
+}
+
+
+```
+
+#### Server side
+
+```
+
+func authMiddleware(context *dsrpc.Context) error {
+    var err error
+    reqIdent := context.AuthIdent()
+    reqSalt := context.AuthSalt()
+    reqHash := context.AuthHash()
+
+    if reqIdent != "login" {
+        err = errors.New("auth ident or pass mismatch")
+        context.SendError(err)
+        return err
+    }
+
+    ident := reqIdent
+    pass := []byte("password")
+
+    ok := dsrpc.CheckHash(ident, pass, reqSalt, reqHash)
+    log.Println("auth is ok:", ok)
+    if !ok {
+        err = errors.New("auth ident or pass mismatch")
+        context.SendError(err)
+        return err
+    }
+    return err
+}
+
+func sampleServ(quiet bool) error {
+    var err error
+
+    if quiet {
+        dsrpc.SetAccessWriter(io.Discard)
+        dsrpc.SetMessageWriter(io.Discard)
+    }
+    serv := NewService()
+
+    serv.PreMiddleware(authMiddleware)
+    serv.PreMiddleware(dsrpc.LogRequest)
+
+    serv.Handler(HelloMethod, helloHandler)
+    serv.Handler(SaveMethod, saveHandler)
+    serv.Handler(LoadMethod, loadHandler)
+
+    serv.PostMiddleware(dsrpc.LogResponse)
+    serv.PostMiddleware(dsrpc.LogAccess)
+
+    err = serv.Listen(":8081")
+    if err != nil {
+        return err
+    }
+    return err
+}
+
+```
+
+### Put method
+
+#### Client side sample
+
+```
+    var binSize int64 = 16
+    rand.Seed(time.Now().UnixNano())
+    binBytes := make([]byte, binSize)
+    rand.Read(binBytes)
+
+    reader := bytes.NewReader(binBytes)
+
+    err = dsrpc.Put("127.0.0.1:8081", SaveMethod, reader, binSize, params, result, auth)
+
+```
+#### Server side
+
+```
+func saveHandler(context *dsrpc.Context) error {
+    var err error
+    params := NewSaveParams()
+
+    err = context.BindParams(params)
+    if err != nil {
+        return err
+    }
+
+    bufferBytes := make([]byte, 0, 1024)
+    binWriter := bytes.NewBuffer(bufferBytes)
+
+    err = context.ReadBin(binWriter)
+    if err != nil {
+        context.SendError(err)
+        return err
+    }
+
+    result := NewSaveResult()
+    result.Message = "saved successfully!"
+
+    err = context.SendResult(result, 0)
+    if err != nil {
+        return err
+    }
+    return err
+}
+
+```
+
+### Get method
+
+#### Client side
+
+```
+    params := NewLoadParams()
+    params.Message = "load data!"
+    result := NewHelloResult()
+    auth := CreateAuth([]byte("qwert"), []byte("12345"))
+
+    binBytes := make([]byte, 0)
+    writer := bytes.NewBuffer(binBytes)
+
+    err = dsrpc.Get("127.0.0.1:8081", LoadMethod, writer, params, result, auth)
+    if err != nil {
+        return err
+    }
+
+    //...
+
+```
+
+#### Server side
+
+```
+
+func getHandler(context *dsrpc.Context) error {
+    var err error
+    params := NewSaveParams()
+
+    err = context.BindParams(params)
+    if err != nil {
+        return err
+    }
+
+    var binSize int64 = 1024
+
+    rand.Seed(time.Now().UnixNano())
+    binBytes := make([]byte, binSize)
+    rand.Read(binBytes)
+
+    binReader := bytes.NewReader(binBytes)
+
+    result := NewSaveResult()
+    result.Message = "load successfully!"
+
+    err = context.SendResult(result, binSize)
+    if err != nil {
+        return err
+    }
+    binWriter := context.BinWriter()
+    _, err = dsrpc.CopyBytes(binReader, binWriter, binSize)
+    if err != nil {
+        return err
+    }
+
+    return err
 }
 
 ```

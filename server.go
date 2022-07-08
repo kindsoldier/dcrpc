@@ -56,6 +56,7 @@ func (this *Service) Handler(method string, handler HandlerFunc) {
 func (this *Service) Listen(address string) error {
     var err error
     logInfo("server listen:", address)
+
     listener, err := net.Listen("tcp", address)
     if err != nil {
         return err
@@ -72,7 +73,6 @@ func (this *Service) Listen(address string) error {
         if err != nil {
             logError("conn accept err:", err)
         }
-
         go this.handleConn(conn)
     }
 }
@@ -120,26 +120,31 @@ func (this *Service) handleConn(conn net.Conn) {
 
     err = context.ReadRequest()
     if err != nil {
+        err = Err(err)
         return
     }
 
     err = context.BindMethod()
     if err != nil {
+        err = Err(err)
         return
     }
     for _, mw := range this.preMw {
         err = mw(context)
         if err != nil {
+            err = Err(err)
             return
         }
     }
     err = this.Route(context)
     if err != nil {
+        err = Err(err)
         return
     }
     for _, mw := range this.postMw {
         err = mw(context)
         if err != nil {
+            err = Err(err)
             return
         }
     }
@@ -149,9 +154,9 @@ func (this *Service) handleConn(conn net.Conn) {
 func (this *Service) Route(context *Context) error {
     handler, ok := this.handlers[context.reqRPC.Method]
     if ok {
-        return handler(context)
+        return Err(handler(context))
     }
-    return notFound(context)
+    return Err(notFound(context))
 }
 
 func (context *Context) ReadRequest() error {
@@ -159,19 +164,19 @@ func (context *Context) ReadRequest() error {
 
     context.reqPacket.header, err = ReadBytes(context.sockReader, headerSize)
     if err != nil {
-        return err
+        return Err(err)
     }
     context.reqHeader, err = UnpackHeader(context.reqPacket.header)
     if err != nil {
-        return err
+        return Err(err)
     }
 
     rpcSize := context.reqHeader.rpcSize
     context.reqPacket.rcpPayload, err = ReadBytes(context.sockReader, rpcSize)
     if err != nil {
-        return err
+        return Err(err)
     }
-    return err
+    return Err(err)
 }
 
 func (context *Context) BinWriter() io.Writer {
@@ -189,14 +194,14 @@ func (context *Context) BinSize() int64 {
 func (context *Context) ReadBin(writer io.Writer) error {
     var err error
     _, err = CopyBytes(context.sockReader, writer, context.reqHeader.binSize)
-    return err
+    return Err(err)
 }
 
 
 func (context *Context) BindMethod() error {
     var err error
     err = json.Unmarshal(context.reqPacket.rcpPayload, context.reqRPC)
-    return err
+    return Err(err)
 }
 
 func (context *Context) BindParams(params any) error {
@@ -204,9 +209,9 @@ func (context *Context) BindParams(params any) error {
     context.reqRPC.Params = params
     err = json.Unmarshal(context.reqPacket.rcpPayload, context.reqRPC)
     if err != nil {
-        return err
+        return Err(err)
     }
-    return err
+    return Err(err)
 }
 
 func (context *Context) SendResult(result any, binSize int64) error {
@@ -215,24 +220,24 @@ func (context *Context) SendResult(result any, binSize int64) error {
 
     context.resPacket.rcpPayload, err = context.resRPC.Pack()
     if err != nil {
-        return err
+        return Err(err)
     }
     context.resHeader.rpcSize = int64(len(context.resPacket.rcpPayload))
     context.resHeader.binSize = binSize
 
     context.resPacket.header, err = context.resHeader.Pack()
     if err != nil {
-        return err
+        return Err(err)
     }
     _, err = context.sockWriter.Write(context.resPacket.header)
     if err != nil {
-        return err
+        return Err(err)
     }
     _, err = context.sockWriter.Write(context.resPacket.rcpPayload)
     if err != nil {
-        return err
+        return Err(err)
     }
-    return err
+    return Err(err)
 }
 
 
@@ -244,20 +249,20 @@ func (context *Context) SendError(execErr error) error {
 
     context.resPacket.rcpPayload, err = context.resRPC.Pack()
     if err != nil {
-        return err
+        return Err(err)
     }
     context.resHeader.rpcSize = int64(len(context.resPacket.rcpPayload))
     context.resPacket.header, err = context.resHeader.Pack()
     if err != nil {
-        return err
+        return Err(err)
     }
     _, err = context.sockWriter.Write(context.resPacket.header)
     if err != nil {
-        return err
+        return Err(err)
     }
     _, err = context.sockWriter.Write(context.resPacket.rcpPayload)
     if err != nil {
-        return err
+        return Err(err)
     }
-    return err
+    return Err(err)
 }

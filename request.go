@@ -24,7 +24,7 @@ func NewRequest() *Request {
 
 func (this *Request) Pack() ([]byte, error) {
     rBytes, err := json.Marshal(this)
-    return rBytes, err
+    return rBytes, Err(err)
 }
 
 func (this *Request) JSON() []byte {

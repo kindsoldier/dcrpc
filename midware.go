@@ -14,18 +14,18 @@ import (
 func LogRequest(context *Context) error {
     var err error
     logDebug("request:", string(context.reqRPC.JSON()))
-    return err
+    return Err(err)
 }
 
 func LogResponse(context *Context) error {
     var err error
     logDebug("response:", string(context.resRPC.JSON()))
-    return err
+    return Err(err)
 }
 
 func LogAccess(context *Context) error {
     var err error
     execTime := time.Now().Sub(context.start)
     logAccess(context.remoteHost, context.reqRPC.Method, execTime)
-    return err
+    return Err(err)
 }

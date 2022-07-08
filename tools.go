@@ -13,7 +13,7 @@ import (
 func ReadBytes(reader io.Reader, size int64) ([]byte, error) {
     buffer := make([]byte, size)
     read, err := io.ReadFull(reader, buffer)
-    return buffer[0:read], err
+    return buffer[0:read], Err(err)
 }
 
 func CopyBytes(reader io.Reader, writer io.Writer, dataSize int64) (int64, error) {
@@ -38,17 +38,20 @@ func CopyBytes(reader io.Reader, writer io.Writer, dataSize int64) (int64, error
         }
         received, err := reader.Read(buffer[0:bSize])
         if err != nil {
-            return total, fmt.Errorf("read error: %v", err)
+            err = fmt.Errorf("read error: %v", err)
+            return total, Err(err)
         }
         recorded, err := writer.Write(buffer[0:received])
         if err != nil {
-            return total, fmt.Errorf("write error: %v", err)
+            err = fmt.Errorf("write error: %v", err)
+            return total, Err(err)
         }
         if recorded != received {
-            return total, errors.New("size mismatch")
+            err = errors.New("size mismatch")
+            return total, Err(err)
         }
         total += int64(recorded)
         remains -= int64(recorded)
     }
-    return total, err
+    return total, Err(err)
 }

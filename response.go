@@ -27,5 +27,5 @@ func (this *Response) JSON() []byte {
 
 func (this *Response) Pack() ([]byte, error) {
     rBytes, err := json.Marshal(this)
-    return rBytes, err
+    return rBytes, Err(err)
 }

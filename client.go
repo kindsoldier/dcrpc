@@ -20,7 +20,7 @@ func Put(address string, method string, reader io.Reader, size int64, param, res
 
     conn, err := net.Dial("tcp", address)
     if err != nil {
-        return err
+        return Err(err)
     }
     defer conn.Close()
 
@@ -47,11 +47,11 @@ func ConnPut(conn net.Conn, method string, reader io.Reader, size int64, param, 
 
     err = context.CreateRequest()
     if err != nil {
-        return err
+        return Err(err)
     }
     err = context.WriteRequest()
     if err != nil {
-        return err
+        return Err(err)
     }
 
     var wg sync.WaitGroup
@@ -66,13 +66,13 @@ func ConnPut(conn net.Conn, method string, reader io.Reader, size int64, param, 
     wg.Wait()
     err = <- errChan
     if err != nil {
-        return err
+        return Err(err)
     }
     err = context.BindResponse()
     if err != nil {
-        return err
+        return Err(err)
     }
-    return err
+    return Err(err)
 }
 
 func Get(address string, method string, writer io.Writer, param, result any, auth *Auth) error {
@@ -80,7 +80,7 @@ func Get(address string, method string, writer io.Writer, param, result any, aut
 
     conn, err := net.Dial("tcp", address)
     if err != nil {
-        return err
+        return Err(err)
     }
     defer conn.Close()
 
@@ -104,41 +104,40 @@ func ConnGet(conn net.Conn, method string, writer io.Writer, param, result any, 
     }
     err = context.CreateRequest()
     if err != nil {
-        return err
+        return Err(err)
     }
     err = context.WriteRequest()
     if err != nil {
-        return err
+        return Err(err)
     }
     err = context.ReadResponse()
     if err != nil {
-        return err
+        return Err(err)
     }
     err = context.DownloadBin()
     if err != nil {
-        return err
+        return Err(err)
     }
     err = context.BindResponse()
     if err != nil {
-        return err
+        return Err(err)
     }
-    return err
+    return Err(err)
 }
 
 func Exec(address, method string, param any, result any, auth *Auth) error {
     var err error
-
     conn, err := net.Dial("tcp", address)
     if err != nil {
-        return err
+        return Err(err)
     }
     defer conn.Close()
 
     err = ConnExec(conn, method, param, result, auth)
     if err != nil {
-        return err
+        return Err(err)
     }
-    return err
+    return Err(err)
 }
 
 
@@ -157,21 +156,21 @@ func ConnExec(conn net.Conn, method string, param any, result any, auth *Auth) e
 
     err = context.CreateRequest()
     if err != nil {
-        return err
+        return Err(err)
     }
     err = context.WriteRequest()
     if err != nil {
-        return err
+        return Err(err)
     }
     err = context.ReadResponse()
     if err != nil {
-        return err
+        return Err(err)
     }
     err = context.BindResponse()
     if err != nil {
-        return err
+        return Err(err)
     }
-    return err
+    return Err(err)
 }
 
 
@@ -180,35 +179,35 @@ func (context *Context) CreateRequest() error {
 
     context.reqPacket.rcpPayload, err = context.reqRPC.Pack()
     if err != nil {
-        return err
+        return Err(err)
     }
     rpcSize := int64(len(context.reqPacket.rcpPayload))
     context.reqHeader.rpcSize = rpcSize
 
     context.reqPacket.header, err = context.reqHeader.Pack()
     if err != nil {
-        return err
+        return Err(err)
     }
-    return err
+    return Err(err)
 }
 
 func (context *Context) WriteRequest() error {
     var err error
     _, err = context.sockWriter.Write(context.reqPacket.header)
     if err != nil {
-        return err
+        return Err(err)
     }
     _, err = context.sockWriter.Write(context.reqPacket.rcpPayload)
     if err != nil {
-        return err
+        return Err(err)
     }
-    return err
+    return Err(err)
 }
 
 func (context *Context) UploadBin() error {
     var err error
     _, err = CopyBytes(context.binReader, context.binWriter, context.reqHeader.binSize)
-    return err
+    return Err(err)
 }
 
 func (context *Context) ReadResponse() error {
@@ -216,18 +215,18 @@ func (context *Context) ReadResponse() error {
 
     context.resPacket.header, err = ReadBytes(context.sockReader, headerSize)
     if err != nil {
-        return err
+        return Err(err)
     }
     context.resHeader, err = UnpackHeader(context.resPacket.header)
     if err != nil {
-        return err
+        return Err(err)
     }
     rpcSize := context.resHeader.rpcSize
     context.resPacket.rcpPayload, err = ReadBytes(context.sockReader, rpcSize)
     if err != nil {
-        return err
+        return Err(err)
     }
-    return err
+    return Err(err)
 }
 
 func (context *Context) UploadBinAsync(wg *sync.WaitGroup) {
@@ -248,15 +247,18 @@ func (context *Context) ReadResponseAsync(wg *sync.WaitGroup, errChan chan error
     defer exitFunc()
     context.resPacket.header, err = ReadBytes(context.sockReader, headerSize)
     if err != nil {
+        err = Err(err)
         return
     }
     context.resHeader, err = UnpackHeader(context.resPacket.header)
     if err != nil {
+        err = Err(err)
         return
     }
     rpcSize := context.resHeader.rpcSize
     context.resPacket.rcpPayload, err = ReadBytes(context.sockReader, rpcSize)
     if err != nil {
+        err = Err(err)
         return
     }
     return
@@ -265,7 +267,7 @@ func (context *Context) ReadResponseAsync(wg *sync.WaitGroup, errChan chan error
 func (context *Context) DownloadBin() error {
     var err error
     _, err = CopyBytes(context.binReader, context.binWriter, context.resHeader.binSize)
-    return err
+    return Err(err)
 }
 
 func (context *Context) BindResponse() error {
@@ -273,10 +275,11 @@ func (context *Context) BindResponse() error {
 
     err = json.Unmarshal(context.resPacket.rcpPayload, context.resRPC)
     if err != nil {
-        return err
+        return Err(err)
     }
     if len(context.resRPC.Error) > 0 {
-        return errors.New(context.resRPC.Error)
+        err = errors.New(context.resRPC.Error)
+        return Err(err)
     }
-    return err
+    return Err(err)
 }
