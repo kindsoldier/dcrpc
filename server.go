@@ -1,29 +1,33 @@
 /*
- *
  * Copyright 2022 Oleg Borodin  <borodin@unix7.org>
- *
  */
 
 package dsrpc
 
 import (
     "context"
-    "encoding/json"
     "errors"
+    "fmt"
     "io"
     "net"
     "sync"
+    "time"
+
+    encoder "github.com/vmihailenco/msgpack/v5"
 )
 
 type HandlerFunc =  func(*Context) error
 
 type Service struct {
-    handlers map[string]HandlerFunc
-    ctx     context.Context
-    cancel  context.CancelFunc
-    wg      *sync.WaitGroup
-    preMw   []HandlerFunc
-    postMw  []HandlerFunc
+    handlers    map[string]HandlerFunc
+    ctx         context.Context
+    cancel      context.CancelFunc
+    wg          *sync.WaitGroup
+    preMw       []HandlerFunc
+    postMw      []HandlerFunc
+    keepalive   bool
+    kaTime      time.Duration
+    kaMtx       sync.Mutex
 }
 
 func NewService() *Service {
@@ -40,41 +44,59 @@ func NewService() *Service {
     return rdrpc
 }
 
-func (this *Service) PreMiddleware(mw HandlerFunc) {
-    this.preMw = append(this.preMw, mw)
+func (svc *Service) PreMiddleware(mw HandlerFunc) {
+    svc.preMw = append(svc.preMw, mw)
 }
 
-func (this *Service) PostMiddleware(mw HandlerFunc) {
-    this.postMw = append(this.postMw, mw)
+func (svc *Service) PostMiddleware(mw HandlerFunc) {
+    svc.postMw = append(svc.postMw, mw)
 }
 
-
-func (this *Service) Handler(method string, handler HandlerFunc) {
-    this.handlers[method] = handler
+func (svc *Service) Handler(method string, handler HandlerFunc) {
+    svc.handlers[method] = handler
 }
 
-func (this *Service) Listen(address string) error {
+func (svc *Service) SetKeepAlive(flag bool) {
+    svc.kaMtx.Lock()
+    defer svc.kaMtx.Unlock()
+    svc.keepalive = true
+}
+
+func (svc *Service) SetKeepAlivePeriod(interval time.Duration) {
+    svc.kaMtx.Lock()
+    defer svc.kaMtx.Unlock()
+    svc.kaTime = interval
+}
+
+func (svc *Service) Listen(address string) error {
     var err error
     logInfo("server listen:", address)
 
-    listener, err := net.Listen("tcp", address)
+    addr, err := net.ResolveTCPAddr("tcp", address)
     if err != nil {
+        err = fmt.Errorf("unable to resolve adddress: %s", err)
         return err
     }
-    this.wg.Add(1)
+    listener, err := net.ListenTCP("tcp", addr)
+    if err != nil {
+        err = fmt.Errorf("unable to start listener: %s", err)
+        return err
+    }
+
     for {
-        select {
-            case <- this.ctx.Done():
-                this.wg.Done()
-                return err
-            default:
-        }
-        conn, err := listener.Accept()
+        conn, err := listener.AcceptTCP()
         if err != nil {
             logError("conn accept err:", err)
         }
-        go this.handleConn(conn)
+        select {
+            case <-svc.ctx.Done():
+                return err
+            default:
+        }
+        svc.wg.Add(1)
+        go svc.handleConn(conn, svc.wg)
     }
+    return err
 }
 
 func notFound(context *Context) error {
@@ -83,16 +105,34 @@ func notFound(context *Context) error {
     return err
 }
 
-func (this *Service) Stop() error {
+func (svc *Service) Stop() error {
     var err error
-    this.cancel()
-    this.wg.Wait()
+    // Disable new connection
+    logInfo("cancel rpc accept loop")
+    svc.cancel()
+    // Wait handlers
+    logInfo("wait rpc handlers")
+    svc.wg.Wait()
     return err
 }
 
-func (this *Service) handleConn(conn net.Conn) {
+func (svc *Service) handleConn(conn *net.TCPConn, wg *sync.WaitGroup) {
     var err error
 
+    if svc.keepalive {
+        err = conn.SetKeepAlive(true)
+        if err != nil {
+            err = fmt.Errorf("unable to set keepalive: %s", err)
+            return
+        }
+        if svc.kaTime > 0 {
+            err = conn.SetKeepAlivePeriod(svc.kaTime)
+            if err != nil {
+                err = fmt.Errorf("unable to set keepalive period: %s", err)
+                return
+            }
+        }
+    }
     context := CreateContext(conn)
 
     remoteAddr := conn.RemoteAddr().String()
@@ -104,6 +144,7 @@ func (this *Service) handleConn(conn net.Conn) {
 
     exitFunc := func() {
             conn.Close()
+            wg.Done()
             if err != nil {
                 logError("conn handler err:", err)
             }
@@ -129,19 +170,19 @@ func (this *Service) handleConn(conn net.Conn) {
         err = Err(err)
         return
     }
-    for _, mw := range this.preMw {
+    for _, mw := range svc.preMw {
         err = mw(context)
         if err != nil {
             err = Err(err)
             return
         }
     }
-    err = this.Route(context)
+    err = svc.Route(context)
     if err != nil {
         err = Err(err)
         return
     }
-    for _, mw := range this.postMw {
+    for _, mw := range svc.postMw {
         err = mw(context)
         if err != nil {
             err = Err(err)
@@ -151,8 +192,8 @@ func (this *Service) handleConn(conn net.Conn) {
     return
 }
 
-func (this *Service) Route(context *Context) error {
-    handler, ok := this.handlers[context.reqRPC.Method]
+func (svc *Service) Route(context *Context) error {
+    handler, ok := svc.handlers[context.reqRPC.Method]
     if ok {
         return Err(handler(context))
     }
@@ -200,14 +241,14 @@ func (context *Context) ReadBin(writer io.Writer) error {
 
 func (context *Context) BindMethod() error {
     var err error
-    err = json.Unmarshal(context.reqPacket.rcpPayload, context.reqRPC)
+    err = encoder.Unmarshal(context.reqPacket.rcpPayload, context.reqRPC)
     return Err(err)
 }
 
 func (context *Context) BindParams(params any) error {
     var err error
     context.reqRPC.Params = params
-    err = json.Unmarshal(context.reqPacket.rcpPayload, context.reqRPC)
+    err = encoder.Unmarshal(context.reqPacket.rcpPayload, context.reqRPC)
     if err != nil {
         return Err(err)
     }

@@ -33,27 +33,27 @@ func NewHeader() *Header {
     }
 }
 
-func (this *Header) JSON() []byte {
-    jBytes, _ := json.Marshal(this)
+func (hdr *Header) JSON() []byte {
+    jBytes, _ := json.Marshal(hdr)
     return jBytes
 }
 
 
-func (this *Header) Pack() ([]byte, error) {
+func (hdr *Header) Pack() ([]byte, error) {
     var err error
     headerBytes := make([]byte, 0, headerSize)
     headerBuffer := bytes.NewBuffer(headerBytes)
 
-    magicCodeABytes := encoderI64(this.magicCodeA)
+    magicCodeABytes := encoderI64(hdr.magicCodeA)
     headerBuffer.Write(magicCodeABytes)
 
-    rpcSizeBytes := encoderI64(this.rpcSize)
+    rpcSizeBytes := encoderI64(hdr.rpcSize)
     headerBuffer.Write(rpcSizeBytes)
 
-    binSizeBytes := encoderI64(this.binSize)
+    binSizeBytes := encoderI64(hdr.binSize)
     headerBuffer.Write(binSizeBytes)
 
-    magicCodeBBytes := encoderI64(this.magicCodeB)
+    magicCodeBBytes := encoderI64(hdr.magicCodeB)
     headerBuffer.Write(magicCodeBBytes)
 
     return headerBuffer.Bytes(), Err(err)

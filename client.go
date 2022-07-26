@@ -1,28 +1,45 @@
 /*
- *
  * Copyright 2022 Oleg Borodin  <borodin@unix7.org>
- *
  */
 
 package dsrpc
 
 import (
-    "encoding/json"
     "errors"
+    "fmt"
     "io"
     "net"
     "sync"
+
+    encoder "github.com/vmihailenco/msgpack/v5"
 )
 
 
 func Put(address string, method string, reader io.Reader, size int64, param, result any, auth *Auth) error {
     var err error
 
-    conn, err := net.Dial("tcp", address)
+    addr, err := net.ResolveTCPAddr("tcp", address)
+    if err != nil {
+        err = fmt.Errorf("unable to resolve adddress: %s", err)
+        return Err(err)
+    }
+    conn, err := net.DialTCP("tcp", nil, addr)
     if err != nil {
         return Err(err)
     }
     defer conn.Close()
+
+    //err = conn.SetKeepAlive(true)
+    //if err != nil {
+    //    err = fmt.Errorf("unable to set keepalive: %s", err)
+    //    return Err(err)
+    //}
+
+    //err = conn.SetKeepAlivePeriod(10 * time.Second)
+    //if err != nil {
+    //    err = fmt.Errorf("unable to set keepalive period: %s", err)
+    //    return Err(err)
+    //}
 
     return ConnPut(conn, method, reader, size, param, result, auth)
 }
@@ -78,11 +95,28 @@ func ConnPut(conn net.Conn, method string, reader io.Reader, size int64, param, 
 func Get(address string, method string, writer io.Writer, param, result any, auth *Auth) error {
     var err error
 
-    conn, err := net.Dial("tcp", address)
+    addr, err := net.ResolveTCPAddr("tcp", address)
+    if err != nil {
+        err = fmt.Errorf("unable to resolve adddress: %s", err)
+        return Err(err)
+    }
+    conn, err := net.DialTCP("tcp", nil, addr)
     if err != nil {
         return Err(err)
     }
     defer conn.Close()
+
+    //err = conn.SetKeepAlive(true)
+    //if err != nil {
+    //    err = fmt.Errorf("unable to set keepalive: %s", err)
+    //    return Err(err)
+    //}
+
+    //err = conn.SetKeepAlivePeriod(10 * time.Second)
+    //if err != nil {
+    //    err = fmt.Errorf("unable to set keepalive period: %s", err)
+    //    return Err(err)
+    //}
 
     return ConnGet(conn, method, writer, param, result, auth)
 }
@@ -127,11 +161,28 @@ func ConnGet(conn net.Conn, method string, writer io.Writer, param, result any, 
 
 func Exec(address, method string, param any, result any, auth *Auth) error {
     var err error
-    conn, err := net.Dial("tcp", address)
+
+    addr, err := net.ResolveTCPAddr("tcp", address)
+    if err != nil {
+        err = fmt.Errorf("unable to resolve adddress: %s", err)
+        return Err(err)
+    }
+    conn, err := net.DialTCP("tcp", nil, addr)
     if err != nil {
         return Err(err)
     }
     defer conn.Close()
+
+    //err = conn.SetKeepAlive(true)
+    //if err != nil {
+    //    err = fmt.Errorf("unable to set keepalive: %s", err)
+    //    return Err(err)
+    //}
+    //err = conn.SetKeepAlivePeriod(10 * time.Second)
+    //if err != nil {
+    //    err = fmt.Errorf("unable to set keepalive period: %s", err)
+    //    return Err(err)
+    //}
 
     err = ConnExec(conn, method, param, result, auth)
     if err != nil {
@@ -273,7 +324,7 @@ func (context *Context) DownloadBin() error {
 func (context *Context) BindResponse() error {
     var err error
 
-    err = json.Unmarshal(context.resPacket.rcpPayload, context.resRPC)
+    err = encoder.Unmarshal(context.resPacket.rcpPayload, context.resRPC)
     if err != nil {
         return Err(err)
     }

@@ -1,7 +1,5 @@
 /*
- *
  * Copyright 2022 Oleg Borodin  <borodin@unix7.org>
- *
  */
 
 package dsrpc
@@ -59,6 +57,74 @@ func CreateContext(conn net.Conn) *Context {
 func (context *Context) Request() *Request  {
     return context.reqRPC
 }
+
+func (context *Context) RemoteHost() string {
+    return context.remoteHost
+}
+
+func (context *Context) Start() time.Time {
+    return context.start
+}
+
+func (context *Context) Method() string {
+    var method string
+    if context.reqRPC != nil {
+        method = context.reqRPC.Method
+    }
+    return method
+}
+
+func (context *Context) ReqRpcSize() int64 {
+    var size int64
+    if context.reqHeader != nil {
+        size = context.reqHeader.rpcSize
+    }
+    return size
+}
+
+
+func (context *Context) ReqBinSize() int64 {
+    var size int64
+    if context.reqHeader != nil {
+        size = context.reqHeader.binSize
+    }
+    return size
+}
+
+func (context *Context) ResBinSize() int64 {
+    var size int64
+    if context.resHeader != nil {
+        size = context.resHeader.binSize
+    }
+    return size
+}
+
+func (context *Context) ResRpcSize() int64 {
+    var size int64
+    if context.resHeader != nil {
+        size = context.resHeader.rpcSize
+    }
+    return size
+}
+
+func (context *Context) ReqSize() int64 {
+    var size int64
+    if context.reqHeader != nil {
+        size += context.reqHeader.binSize
+        size += context.reqHeader.rpcSize
+    }
+    return size
+}
+
+func (context *Context) ResSize() int64 {
+    var size int64
+    if context.resHeader != nil {
+        size += context.resHeader.binSize
+        size += context.resHeader.rpcSize
+    }
+    return size
+}
+
 
 
 func (context *Context) SetAuthIdent(ident []byte)  {

@@ -8,12 +8,13 @@ package dsrpc
 
 import (
     "encoding/json"
+    encoder "github.com/vmihailenco/msgpack/v5"
 )
 
 type Request struct {
-    Method  string      `json:"method"           msgpack:"method"`
-    Params  any         `json:"params,omitempty" msgpack:"params,omitempty"`
-    Auth    *Auth       `json:"auth,omitempty"   msgpack:"auth,omitempty"`
+    Method  string      `json:"method"            msgpack:"method"`
+    Params  any         `json:"params,omitempty"  msgpack:"params"`
+    Auth    *Auth       `json:"auth,omitempty"    msgpack:"auth"`
 }
 
 func NewRequest() *Request {
@@ -22,12 +23,12 @@ func NewRequest() *Request {
     return req
 }
 
-func (this *Request) Pack() ([]byte, error) {
-    rBytes, err := json.Marshal(this)
+func (req *Request) Pack() ([]byte, error) {
+    rBytes, err := encoder.Marshal(req)
     return rBytes, Err(err)
 }
 
-func (this *Request) JSON() []byte {
-    jBytes, _ := json.Marshal(this)
+func (req *Request) JSON() []byte {
+    jBytes, _ := json.Marshal(req)
     return jBytes
 }

@@ -17,9 +17,9 @@ func init() {
 }
 
 type Auth struct {
-    Ident   []byte      `json:"ident,omitempty"`
-    Salt    []byte      `json:"salt,omitempty"`
-    Hash    []byte      `json:"hash,omitempty"`
+    Ident   []byte      `msgpack:"ident"    json:"ident"`
+    Salt    []byte      `msgpack:"salt"     json:"salt"`
+    Hash    []byte      `msgpack:"hash"     json:"hash"`
 }
 
 func NewAuth() *Auth {

@@ -18,7 +18,7 @@ func ReadBytes(reader io.Reader, size int64) ([]byte, error) {
 
 func CopyBytes(reader io.Reader, writer io.Writer, dataSize int64) (int64, error) {
     var err error
-    var bSize int64 = 1024 * 4
+    var bSize int64 = 1024 * 16
     var total int64 = 0
     var remains int64 = dataSize
     buffer := make([]byte, bSize)

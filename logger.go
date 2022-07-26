@@ -18,22 +18,22 @@ var accessWriter io.Writer = os.Stdout
 
 func logDebug(messages ...any) {
     stamp := time.Now().Format(time.RFC3339)
-    fmt.Fprintln(messageWriter, stamp, "dsrpc debug", messages)
+    fmt.Fprintln(messageWriter, stamp, "debug", messages)
 }
 
 func logInfo(messages ...any) {
     stamp := time.Now().Format(time.RFC3339)
-    fmt.Fprintln(messageWriter, stamp, "dsrpc info", messages)
+    fmt.Fprintln(messageWriter, stamp, "info", messages)
 }
 
 func logError(messages ...any) {
     stamp := time.Now().Format(time.RFC3339)
-    fmt.Fprintln(messageWriter, stamp, "dsrpc error", messages)
+    fmt.Fprintln(messageWriter, stamp, "error", messages)
 }
 
 func logAccess(messages ...any) {
     stamp := time.Now().Format(time.RFC3339)
-    fmt.Fprintln(accessWriter, stamp, "dsrpc access", messages)
+    fmt.Fprintln(accessWriter, stamp, "access", messages)
 }
 
 func SetAccessWriter(writer io.Writer) {
