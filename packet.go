@@ -5,19 +5,19 @@
 package dsrpc
 
 import (
-    "encoding/json"
+	"encoding/json"
 )
 
 type Packet struct {
-    header      []byte
-    rcpPayload  []byte
+	header     []byte
+	rcpPayload []byte
 }
 
 func NewPacket() *Packet {
-    return &Packet{}
+	return &Packet{}
 }
 
 func (pkt *Packet) JSON() []byte {
-    jBytes, _ := json.Marshal(pkt)
-    return jBytes
+	jBytes, _ := json.Marshal(pkt)
+	return jBytes
 }

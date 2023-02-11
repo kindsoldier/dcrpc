@@ -6,8 +6,8 @@
 
 package dsrpc
 
-type Empty struct {}
+type Empty struct{}
 
 func NewEmpty() *Empty {
-    return &Empty{}
+	return &Empty{}
 }

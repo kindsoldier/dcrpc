@@ -7,51 +7,51 @@
 package dsrpc
 
 import (
-    "net"
-    "testing"
-    "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
+	"net"
+	"testing"
 )
 
 func TestFConn0(t *testing.T) {
-    var cConn, sConn net.Conn
-    sConn, cConn = NewFConn()
+	var cConn, sConn net.Conn
+	sConn, cConn = NewFConn()
 
-    cData := []byte("qwerty")
-    count := 10
+	cData := []byte("qwerty")
+	count := 10
 
-    for i := 0; i < count; i++ {
-        wc, err := cConn.Write(cData)
-        if err != nil {
-            t.Error(err)
-        }
-        require.Equal(t, wc, len(cData))
+	for i := 0; i < count; i++ {
+		wc, err := cConn.Write(cData)
+		if err != nil {
+			t.Error(err)
+		}
+		require.Equal(t, wc, len(cData))
 
-        sData := make([]byte, len(cData))
-        rc, err := sConn.Read(sData)
-        require.NoError(t, err)
-        require.Equal(t, rc, len(cData))
-        require.Equal(t, cData, sData)
-    }
+		sData := make([]byte, len(cData))
+		rc, err := sConn.Read(sData)
+		require.NoError(t, err)
+		require.Equal(t, rc, len(cData))
+		require.Equal(t, cData, sData)
+	}
 }
 
 func TestFConn1(t *testing.T) {
-    var cConn, sConn net.Conn
-    cConn, sConn = NewFConn()
+	var cConn, sConn net.Conn
+	cConn, sConn = NewFConn()
 
-    cData := []byte("qwerty")
-    count := 10
+	cData := []byte("qwerty")
+	count := 10
 
-    for i := 0; i < count; i++ {
-        wc, err := cConn.Write(cData)
-        if err != nil {
-            t.Error(err)
-        }
-        require.Equal(t, wc, len(cData))
+	for i := 0; i < count; i++ {
+		wc, err := cConn.Write(cData)
+		if err != nil {
+			t.Error(err)
+		}
+		require.Equal(t, wc, len(cData))
 
-        sData := make([]byte, len(cData))
-        rc, err := sConn.Read(sData)
-        require.NoError(t, err)
-        require.Equal(t, rc, len(cData))
-        require.Equal(t, cData, sData)
-    }
+		sData := make([]byte, len(cData))
+		rc, err := sConn.Read(sData)
+		require.NoError(t, err)
+		require.Equal(t, rc, len(cData))
+		require.Equal(t, cData, sData)
+	}
 }
