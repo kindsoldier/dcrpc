@@ -16,26 +16,47 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const HelloMethod string = "hello"
+
+type HelloParams struct {
+	Message string `json:"message" msgpack:"message"`
+}
+
+type HelloResult struct {
+	Message string `json:"message" msgpack:"message"`
+}
+
+const SaveMethod string = "save"
+
+type SaveParams HelloParams
+type SaveResult HelloResult
+
+const LoadMethod string = "load"
+
+type LoadParams HelloParams
+type LoadResult HelloResult
+
 func TestLocalExec(t *testing.T) {
 	var err error
-	params := NewHelloParams()
+	params := HelloParams{}
 	params.Message = "hello server!"
-	result := NewHelloResult()
+	result := HelloResult{}
 
 	auth := CreateAuth([]byte("qwert"), []byte("12345"))
 
-	err = LocalExec(HelloMethod, params, result, auth, helloHandler)
+	err = LocalExec(HelloMethod, &params, &result, auth, helloHandler)
 	require.NoError(t, err)
-	resultJSON, _ := json.Marshal(result)
-	logDebug("method result:", string(resultJSON))
+
+	resultJson, _ := json.Marshal(result)
+	logDebug("method result:", string(resultJson))
 }
 
 func TestLocalSave(t *testing.T) {
 	var err error
 
-	params := NewSaveParams()
+	params := SaveParams{}
 	params.Message = "save data!"
-	result := NewHelloResult()
+	result := SaveResult{}
 	auth := CreateAuth([]byte("qwert"), []byte("12345"))
 
 	var binSize int64 = 16
@@ -45,29 +66,29 @@ func TestLocalSave(t *testing.T) {
 
 	reader := bytes.NewReader(binBytes)
 
-	err = LocalPut(SaveMethod, reader, binSize, params, result, auth, saveHandler)
+	err = LocalPut(SaveMethod, reader, binSize, &params, &result, auth, saveHandler)
 	require.NoError(t, err)
 
-	resultJSON, _ := json.Marshal(result)
-	logDebug("method result:", string(resultJSON))
+	resultJson, _ := json.Marshal(result)
+	logDebug("method result:", string(resultJson))
 }
 
 func TestLocalLoad(t *testing.T) {
 	var err error
 
-	params := NewLoadParams()
+	params := LoadParams{}
 	params.Message = "load data!"
-	result := NewHelloResult()
+	result := LoadResult{}
 	auth := CreateAuth([]byte("qwert"), []byte("12345"))
 
 	binBytes := make([]byte, 0)
 	writer := bytes.NewBuffer(binBytes)
 
-	err = LocalGet(LoadMethod, writer, params, result, auth, loadHandler)
+	err = LocalGet(LoadMethod, writer, &params, &result, auth, loadHandler)
 	require.NoError(t, err)
 
-	resultJSON, _ := json.Marshal(result)
-	logDebug("method result:", string(resultJSON))
+	resultJson, _ := json.Marshal(result)
+	logDebug("method result:", string(resultJson))
 	logDebug("bin size:", len(writer.Bytes()))
 }
 
@@ -103,16 +124,16 @@ func BenchmarkNetPut(b *testing.B) {
 			clientSave()
 		}
 	}
-	b.SetParallelism(10)
+	b.SetParallelism(2000)
 	b.RunParallel(pBench)
 }
 
 func clientHello() error {
 	var err error
 
-	params := NewHelloParams()
+	params := HelloParams{}
 	params.Message = "hello server!"
-	result := NewHelloResult()
+	result := HelloResult{}
 	auth := CreateAuth([]byte("qwert"), []byte("12345"))
 
 	var binSize int64 = 16
@@ -120,22 +141,22 @@ func clientHello() error {
 	binBytes := make([]byte, binSize)
 	rand.Read(binBytes)
 
-	err = Exec("127.0.0.1:8081", HelloMethod, params, result, auth)
+	err = Exec("127.0.0.1:8081", HelloMethod, &params, &result, auth)
 	if err != nil {
 		logError("method err:", err)
 		return err
 	}
-	resultJSON, _ := json.Marshal(result)
-	logDebug("method result:", string(resultJSON))
+	resultJson, _ := json.Marshal(result)
+	logDebug("method result:", string(resultJson))
 	return err
 }
 
 func clientSave() error {
 	var err error
 
-	params := NewSaveParams()
+	params := SaveParams{}
 	params.Message = "save data!"
-	result := NewHelloResult()
+	result := SaveResult{}
 	auth := CreateAuth([]byte("qwert"), []byte("12345"))
 
 	var binSize int64 = 16
@@ -145,34 +166,34 @@ func clientSave() error {
 
 	reader := bytes.NewReader(binBytes)
 
-	err = Put("127.0.0.1:8081", SaveMethod, reader, binSize, params, result, auth)
+	err = Put("127.0.0.1:8081", SaveMethod, reader, binSize, &params, &result, auth)
 	if err != nil {
 		logError("method err:", err)
 		return err
 	}
-	resultJSON, _ := json.Marshal(result)
-	logDebug("method result:", string(resultJSON))
+	resultJson, _ := json.Marshal(result)
+	logDebug("method result:", string(resultJson))
 	return err
 }
 
 func clientLoad() error {
 	var err error
 
-	params := NewLoadParams()
+	params := LoadParams{}
 	params.Message = "load data!"
-	result := NewHelloResult()
+	result := LoadResult{}
 	auth := CreateAuth([]byte("qwert"), []byte("12345"))
 
 	binBytes := make([]byte, 0)
 	writer := bytes.NewBuffer(binBytes)
 
-	err = Get("127.0.0.1:8081", LoadMethod, writer, params, result, auth)
+	err = Get("127.0.0.1:8081", LoadMethod, writer, &params, &result, auth)
 	if err != nil {
 		logError("method err:", err)
 		return err
 	}
-	resultJSON, _ := json.Marshal(result)
-	logDebug("method result:", string(resultJSON))
+	resultJson, _ := json.Marshal(result)
+	logDebug("method result:", string(resultJson))
 	logDebug("bin size:", len(writer.Bytes()))
 	return err
 }
@@ -219,7 +240,7 @@ func auth(content *Content) error {
 	pass := []byte("12345")
 
 	auth := content.Auth()
-	logDebug("auth ", string(auth.JSON()))
+	logDebug("auth ", string(auth.Json()))
 
 	ok := CheckHash(ident, pass, reqSalt, reqHash)
 	logDebug("auth ok:", ok)
@@ -233,9 +254,9 @@ func auth(content *Content) error {
 
 func helloHandler(content *Content) error {
 	var err error
-	params := NewHelloParams()
+	params := HelloParams{}
 
-	err = content.BindParams(params)
+	err = content.BindParams(&params)
 	if err != nil {
 		return err
 	}
@@ -246,7 +267,7 @@ func helloHandler(content *Content) error {
 		return err
 	}
 
-	result := NewHelloResult()
+	result := HelloResult{}
 	result.Message = "hello, client!"
 
 	err = content.SendResult(result, 0)
@@ -258,9 +279,9 @@ func helloHandler(content *Content) error {
 
 func saveHandler(content *Content) error {
 	var err error
-	params := NewSaveParams()
+	params := SaveParams{}
 
-	err = content.BindParams(params)
+	err = content.BindParams(&params)
 	if err != nil {
 		return err
 	}
@@ -274,7 +295,7 @@ func saveHandler(content *Content) error {
 		return err
 	}
 
-	result := NewSaveResult()
+	result := SaveResult{}
 	result.Message = "saved successfully!"
 
 	err = content.SendResult(result, 0)
@@ -286,9 +307,9 @@ func saveHandler(content *Content) error {
 
 func loadHandler(content *Content) error {
 	var err error
-	params := NewSaveParams()
+	params := SaveParams{}
 
-	err = content.BindParams(params)
+	err = content.BindParams(&params)
 	if err != nil {
 		return err
 	}
@@ -306,7 +327,7 @@ func loadHandler(content *Content) error {
 
 	binReader := bytes.NewReader(binBytes)
 
-	result := NewSaveResult()
+	result := SaveResult{}
 	result.Message = "load successfully!"
 
 	err = content.SendResult(result, binSize)
@@ -320,46 +341,4 @@ func loadHandler(content *Content) error {
 	}
 
 	return err
-}
-
-const HelloMethod string = "hello"
-
-type HelloParams struct {
-	Message string `json:"message" msgpack:"message"`
-}
-
-func NewHelloParams() *HelloParams {
-	return &HelloParams{}
-}
-
-type HelloResult struct {
-	Message string `json:"message" msgpack:"message"`
-}
-
-func NewHelloResult() *HelloResult {
-	return &HelloResult{}
-}
-
-const SaveMethod string = "save"
-
-type SaveParams HelloParams
-type SaveResult HelloResult
-
-func NewSaveParams() *SaveParams {
-	return &SaveParams{}
-}
-func NewSaveResult() *SaveResult {
-	return &SaveResult{}
-}
-
-const LoadMethod string = "load"
-
-type LoadParams HelloParams
-type LoadResult HelloResult
-
-func NewLoadParams() *LoadParams {
-	return &LoadParams{}
-}
-func NewLoadResult() *LoadResult {
-	return &LoadResult{}
 }

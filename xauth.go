@@ -26,7 +26,7 @@ func NewAuth() *Auth {
 	return &Auth{}
 }
 
-func (this *Auth) JSON() []byte {
+func (this *Auth) Json() []byte {
 	jBytes, _ := json.Marshal(this)
 	return jBytes
 }
