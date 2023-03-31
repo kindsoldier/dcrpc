@@ -8,8 +8,9 @@ package main
 
 import (
     "log"
-    "github.com/kindsoldier/dsrpc"
     "netsrv/api"
+
+    "github.com/kindsoldier/dsrpc"
 )
 
 func main() {
@@ -46,20 +47,19 @@ func NewController() *Controller {
     return &Controller{}
 }
 
-func (cont *Controller) HelloHandler(context *dsrpc.Context) error {
+func (cont *Controller) HelloHandler(content *dsrpc.Content) error {
     var err error
-    params := api.NewHelloParams()
-    err = context.BindParams(params)
+    params := api.HelloParams{}
+    err = content.BindParams(&params)
     if err != nil {
         return err
     }
-
     log.Println("hello message:", params.Message)
 
-    result := api.NewHelloResult()
-    result.Message = "hello!"
-
-    err = context.SendResult(result, 0)
+    result := api.HelloResult{
+        Message: "hello, client!",
+    }
+    err = content.SendResult(&result, 0)
     if err != nil {
         return err
     }

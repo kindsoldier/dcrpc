@@ -23,12 +23,13 @@ func main() {
 func exec() error {
     var err error
 
-    params := api.NewHelloParams()
-    params.Message = "hello, server!"
+    params := api.HelloParams{
+        Message: "hello, server!",
+    }
 
-    result := api.NewHelloResult()
+    result := api.HelloResult{}
 
-    err = dsrpc.Exec("127.0.0.1:8081", api.HelloMethod, params, result, nil)
+    err = dsrpc.Exec("127.0.0.1:8081", api.HelloMethod, &params, &result, nil)
     if err != nil {
         return err
     }

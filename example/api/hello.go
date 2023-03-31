@@ -12,14 +12,7 @@ type HelloParams struct {
     Message string      `msgpack:"message" json:"message"`
 }
 
-func NewHelloParams() *HelloParams {
-    return &HelloParams{}
-}
-
 type HelloResult struct {
     Message string      `msgpack:"message" json:"message"`
 }
 
-func NewHelloResult() *HelloResult {
-    return &HelloResult{}
-}

@@ -8,6 +8,7 @@ package dsrpc
 
 import (
 	"encoding/json"
+
 	encoder "github.com/vmihailenco/msgpack/v5"
 )
 
