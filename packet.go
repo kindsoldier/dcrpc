@@ -4,20 +4,15 @@
 
 package dsrpc
 
-import (
-	"encoding/json"
-)
-
 type Packet struct {
 	header     []byte
 	rcpPayload []byte
 }
 
-func NewPacket() *Packet {
-	return &Packet{}
-}
-
-func (pkt *Packet) JSON() []byte {
-	jBytes, _ := json.Marshal(pkt)
-	return jBytes
+func NewEmptyPacket() *Packet {
+	packet := &Packet{
+		header:     make([]byte, 0),
+		rcpPayload: make([]byte, 0),
+	}
+	return packet
 }

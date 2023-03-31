@@ -16,7 +16,7 @@ import (
 	encoder "github.com/vmihailenco/msgpack/v5"
 )
 
-type HandlerFunc = func(*Context) error
+type HandlerFunc = func(*Content) error
 
 type Service struct {
 	handlers  map[string]HandlerFunc
@@ -99,9 +99,9 @@ func (svc *Service) Listen(address string) error {
 	return err
 }
 
-func notFound(context *Context) error {
+func notFound(content *Content) error {
 	execErr := errors.New("method not found")
-	err := context.SendError(execErr)
+	err := content.SendError(execErr)
 	return err
 }
 
@@ -133,14 +133,14 @@ func (svc *Service) handleConn(conn *net.TCPConn, wg *sync.WaitGroup) {
 			}
 		}
 	}
-	context := CreateContext(conn)
+	content := CreateContent(conn)
 
 	remoteAddr := conn.RemoteAddr().String()
 	remoteHost, _, _ := net.SplitHostPort(remoteAddr)
-	context.remoteHost = remoteHost
+	content.remoteHost = remoteHost
 
-	context.binReader = conn
-	context.binWriter = io.Discard
+	content.binReader = conn
+	content.binWriter = io.Discard
 
 	exitFunc := func() {
 		conn.Close()
@@ -159,149 +159,149 @@ func (svc *Service) handleConn(conn *net.TCPConn, wg *sync.WaitGroup) {
 	}
 	defer recovFunc()
 
-	err = context.ReadRequest()
+	err = content.ReadRequest()
 	if err != nil {
-		err = Err(err)
+		err = err
 		return
 	}
 
-	err = context.BindMethod()
+	err = content.BindMethod()
 	if err != nil {
-		err = Err(err)
+		err = err
 		return
 	}
 	for _, mw := range svc.preMw {
-		err = mw(context)
+		err = mw(content)
 		if err != nil {
-			err = Err(err)
+			err = err
 			return
 		}
 	}
-	err = svc.Route(context)
+	err = svc.Route(content)
 	if err != nil {
-		err = Err(err)
+		err = err
 		return
 	}
 	for _, mw := range svc.postMw {
-		err = mw(context)
+		err = mw(content)
 		if err != nil {
-			err = Err(err)
+			err = err
 			return
 		}
 	}
 	return
 }
 
-func (svc *Service) Route(context *Context) error {
-	handler, ok := svc.handlers[context.reqRPC.Method]
+func (svc *Service) Route(content *Content) error {
+	handler, ok := svc.handlers[content.reqBlock.Method]
 	if ok {
-		return Err(handler(context))
+		return handler(content)
 	}
-	return Err(notFound(context))
+	return notFound(content)
 }
 
-func (context *Context) ReadRequest() error {
+func (content *Content) ReadRequest() error {
 	var err error
 
-	context.reqPacket.header, err = ReadBytes(context.sockReader, headerSize)
+	content.reqPacket.header, err = ReadBytes(content.sockReader, headerSize)
 	if err != nil {
-		return Err(err)
+		return err
 	}
-	context.reqHeader, err = UnpackHeader(context.reqPacket.header)
+	content.reqHeader, err = UnpackHeader(content.reqPacket.header)
 	if err != nil {
-		return Err(err)
+		return err
 	}
 
-	rpcSize := context.reqHeader.rpcSize
-	context.reqPacket.rcpPayload, err = ReadBytes(context.sockReader, rpcSize)
+	rpcSize := content.reqHeader.rpcSize
+	content.reqPacket.rcpPayload, err = ReadBytes(content.sockReader, rpcSize)
 	if err != nil {
-		return Err(err)
+		return err
 	}
-	return Err(err)
+	return err
 }
 
-func (context *Context) BinWriter() io.Writer {
-	return context.sockWriter
+func (content *Content) BinWriter() io.Writer {
+	return content.sockWriter
 }
 
-func (context *Context) BinReader() io.Reader {
-	return context.sockReader
+func (content *Content) BinReader() io.Reader {
+	return content.sockReader
 }
 
-func (context *Context) BinSize() int64 {
-	return context.reqHeader.binSize
+func (content *Content) BinSize() int64 {
+	return content.reqHeader.binSize
 }
 
-func (context *Context) ReadBin(writer io.Writer) error {
+func (content *Content) ReadBin(writer io.Writer) error {
 	var err error
-	_, err = CopyBytes(context.sockReader, writer, context.reqHeader.binSize)
-	return Err(err)
+	_, err = CopyBytes(content.sockReader, writer, content.reqHeader.binSize)
+	return err
 }
 
-func (context *Context) BindMethod() error {
+func (content *Content) BindMethod() error {
 	var err error
-	err = encoder.Unmarshal(context.reqPacket.rcpPayload, context.reqRPC)
-	return Err(err)
+	err = encoder.Unmarshal(content.reqPacket.rcpPayload, content.reqBlock)
+	return err
 }
 
-func (context *Context) BindParams(params any) error {
+func (content *Content) BindParams(params any) error {
 	var err error
-	context.reqRPC.Params = params
-	err = encoder.Unmarshal(context.reqPacket.rcpPayload, context.reqRPC)
+	content.reqBlock.Params = params
+	err = encoder.Unmarshal(content.reqPacket.rcpPayload, content.reqBlock)
 	if err != nil {
-		return Err(err)
+		return err
 	}
-	return Err(err)
+	return err
 }
 
-func (context *Context) SendResult(result any, binSize int64) error {
+func (content *Content) SendResult(result any, binSize int64) error {
 	var err error
-	context.resRPC.Result = result
+	content.resBlock.Result = result
 
-	context.resPacket.rcpPayload, err = context.resRPC.Pack()
+	content.resPacket.rcpPayload, err = content.resBlock.Pack()
 	if err != nil {
-		return Err(err)
+		return err
 	}
-	context.resHeader.rpcSize = int64(len(context.resPacket.rcpPayload))
-	context.resHeader.binSize = binSize
+	content.resHeader.rpcSize = int64(len(content.resPacket.rcpPayload))
+	content.resHeader.binSize = binSize
 
-	context.resPacket.header, err = context.resHeader.Pack()
+	content.resPacket.header, err = content.resHeader.Pack()
 	if err != nil {
-		return Err(err)
+		return err
 	}
-	_, err = context.sockWriter.Write(context.resPacket.header)
+	_, err = content.sockWriter.Write(content.resPacket.header)
 	if err != nil {
-		return Err(err)
+		return err
 	}
-	_, err = context.sockWriter.Write(context.resPacket.rcpPayload)
+	_, err = content.sockWriter.Write(content.resPacket.rcpPayload)
 	if err != nil {
-		return Err(err)
+		return err
 	}
-	return Err(err)
+	return err
 }
 
-func (context *Context) SendError(execErr error) error {
+func (content *Content) SendError(execErr error) error {
 	var err error
 
-	context.resRPC.Error = execErr.Error()
-	context.resRPC.Result = NewEmpty()
+	content.resBlock.Error = execErr.Error()
+	content.resBlock.Result = NewEmptyResult()
 
-	context.resPacket.rcpPayload, err = context.resRPC.Pack()
+	content.resPacket.rcpPayload, err = content.resBlock.Pack()
 	if err != nil {
-		return Err(err)
+		return err
 	}
-	context.resHeader.rpcSize = int64(len(context.resPacket.rcpPayload))
-	context.resPacket.header, err = context.resHeader.Pack()
+	content.resHeader.rpcSize = int64(len(content.resPacket.rcpPayload))
+	content.resPacket.header, err = content.resHeader.Pack()
 	if err != nil {
-		return Err(err)
+		return err
 	}
-	_, err = context.sockWriter.Write(context.resPacket.header)
+	_, err = content.sockWriter.Write(content.resPacket.header)
 	if err != nil {
-		return Err(err)
+		return err
 	}
-	_, err = context.sockWriter.Write(context.resPacket.rcpPayload)
+	_, err = content.sockWriter.Write(content.resPacket.rcpPayload)
 	if err != nil {
-		return Err(err)
+		return err
 	}
-	return Err(err)
+	return err
 }

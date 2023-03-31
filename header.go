@@ -13,10 +13,12 @@ import (
 	"errors"
 )
 
-const headerSize int64 = 16 * 2
-const sizeOfInt64 int = 8
-const magicCodeA int64 = 0xEE00ABBA
-const magicCodeB int64 = 0xEE44ABBA
+const (
+	headerSize  int64 = 16 * 2
+	sizeOfInt64 int   = 8
+	magicCodeA  int64 = 0xEE00ABBA
+	magicCodeB  int64 = 0xEE44ABBA
+)
 
 type Header struct {
 	magicCodeA int64 `json:"magicCodeA"`
@@ -25,14 +27,14 @@ type Header struct {
 	magicCodeB int64 `json:"magicCodeB"`
 }
 
-func NewHeader() *Header {
+func NewEmptyHeader() *Header {
 	return &Header{
 		magicCodeA: magicCodeA,
 		magicCodeB: magicCodeB,
 	}
 }
 
-func (hdr *Header) JSON() []byte {
+func (hdr *Header) ToJson() []byte {
 	jBytes, _ := json.Marshal(hdr)
 	return jBytes
 }
@@ -54,35 +56,38 @@ func (hdr *Header) Pack() ([]byte, error) {
 	magicCodeBBytes := encoderI64(hdr.magicCodeB)
 	headerBuffer.Write(magicCodeBBytes)
 
-	return headerBuffer.Bytes(), Err(err)
+	return headerBuffer.Bytes(), err
 }
 
 func UnpackHeader(headerBytes []byte) (*Header, error) {
 	var err error
-	header := NewHeader()
+
 	headerReader := bytes.NewReader(headerBytes)
 
 	magicCodeABytes := make([]byte, sizeOfInt64)
 	headerReader.Read(magicCodeABytes)
-	header.magicCodeA = decoderI64(magicCodeABytes)
 
 	rpcSizeBytes := make([]byte, sizeOfInt64)
 	headerReader.Read(rpcSizeBytes)
-	header.rpcSize = decoderI64(rpcSizeBytes)
 
 	binSizeBytes := make([]byte, sizeOfInt64)
 	headerReader.Read(binSizeBytes)
-	header.binSize = decoderI64(binSizeBytes)
 
 	magicCodeBBytes := make([]byte, sizeOfInt64)
 	headerReader.Read(magicCodeBBytes)
-	header.magicCodeB = decoderI64(magicCodeBBytes)
+
+	header := &Header{
+		magicCodeA: decoderI64(magicCodeABytes),
+		rpcSize:    decoderI64(rpcSizeBytes),
+		binSize:    decoderI64(binSizeBytes),
+		magicCodeB: decoderI64(magicCodeBBytes),
+	}
 
 	if header.magicCodeA != magicCodeA || header.magicCodeB != magicCodeB {
-		err = errors.New("wrong protocol magic code")
-		return header, Err(err)
+		err = errors.New("Wrong protocol magic code")
+		return header, err
 	}
-	return header, Err(err)
+	return header, err
 }
 
 func encoderI64(i int64) []byte {

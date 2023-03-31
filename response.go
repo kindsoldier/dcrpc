@@ -6,24 +6,33 @@ package dsrpc
 
 import (
 	"encoding/json"
+
 	encoder "github.com/vmihailenco/msgpack/v5"
 )
+
+type EmptyResult struct{}
+
+func NewEmptyResult() *EmptyResult {
+	return &EmptyResult{}
+}
 
 type Response struct {
 	Error  string `json:"error"   msgpack:"error"`
 	Result any    `json:"result"  msgpack:"result"`
 }
 
-func NewResponse() *Response {
-	return &Response{}
+func NewEmptyResponse() *Response {
+	return &Response{
+		Result: NewEmptyResult(),
+	}
 }
 
-func (resp *Response) JSON() []byte {
+func (resp *Response) ToJson() []byte {
 	jBytes, _ := json.Marshal(resp)
 	return jBytes
 }
 
 func (resp *Response) Pack() ([]byte, error) {
 	rBytes, err := encoder.Marshal(resp)
-	return rBytes, Err(err)
+	return rBytes, err
 }

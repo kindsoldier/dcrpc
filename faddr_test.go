@@ -7,9 +7,10 @@
 package dsrpc
 
 import (
-	"github.com/stretchr/testify/require"
 	"net"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestFConn0(t *testing.T) {

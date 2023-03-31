@@ -209,58 +209,58 @@ func testServ(quiet bool) error {
 	return err
 }
 
-func auth(context *Context) error {
+func auth(content *Content) error {
 	var err error
-	reqIdent := context.AuthIdent()
-	reqSalt := context.AuthSalt()
-	reqHash := context.AuthHash()
+	reqIdent := content.AuthIdent()
+	reqSalt := content.AuthSalt()
+	reqHash := content.AuthHash()
 
 	ident := reqIdent
 	pass := []byte("12345")
 
-	auth := context.Auth()
+	auth := content.Auth()
 	logDebug("auth ", string(auth.JSON()))
 
 	ok := CheckHash(ident, pass, reqSalt, reqHash)
 	logDebug("auth ok:", ok)
 	if !ok {
 		err = errors.New("auth ident or pass missmatch")
-		context.SendError(err)
+		content.SendError(err)
 		return err
 	}
 	return err
 }
 
-func helloHandler(context *Context) error {
+func helloHandler(content *Content) error {
 	var err error
 	params := NewHelloParams()
 
-	err = context.BindParams(params)
+	err = content.BindParams(params)
 	if err != nil {
 		return err
 	}
 
-	err = context.ReadBin(io.Discard)
+	err = content.ReadBin(io.Discard)
 	if err != nil {
-		context.SendError(err)
+		content.SendError(err)
 		return err
 	}
 
 	result := NewHelloResult()
 	result.Message = "hello, client!"
 
-	err = context.SendResult(result, 0)
+	err = content.SendResult(result, 0)
 	if err != nil {
 		return err
 	}
 	return err
 }
 
-func saveHandler(context *Context) error {
+func saveHandler(content *Content) error {
 	var err error
 	params := NewSaveParams()
 
-	err = context.BindParams(params)
+	err = content.BindParams(params)
 	if err != nil {
 		return err
 	}
@@ -268,34 +268,34 @@ func saveHandler(context *Context) error {
 	bufferBytes := make([]byte, 0, 1024)
 	binWriter := bytes.NewBuffer(bufferBytes)
 
-	err = context.ReadBin(binWriter)
+	err = content.ReadBin(binWriter)
 	if err != nil {
-		context.SendError(err)
+		content.SendError(err)
 		return err
 	}
 
 	result := NewSaveResult()
 	result.Message = "saved successfully!"
 
-	err = context.SendResult(result, 0)
+	err = content.SendResult(result, 0)
 	if err != nil {
 		return err
 	}
 	return err
 }
 
-func loadHandler(context *Context) error {
+func loadHandler(content *Content) error {
 	var err error
 	params := NewSaveParams()
 
-	err = context.BindParams(params)
+	err = content.BindParams(params)
 	if err != nil {
 		return err
 	}
 
-	err = context.ReadBin(io.Discard)
+	err = content.ReadBin(io.Discard)
 	if err != nil {
-		context.SendError(err)
+		content.SendError(err)
 		return err
 	}
 
@@ -309,11 +309,11 @@ func loadHandler(context *Context) error {
 	result := NewSaveResult()
 	result.Message = "load successfully!"
 
-	err = context.SendResult(result, binSize)
+	err = content.SendResult(result, binSize)
 	if err != nil {
 		return err
 	}
-	binWriter := context.BinWriter()
+	binWriter := content.BinWriter()
 	_, err = CopyBytes(binReader, binWriter, binSize)
 	if err != nil {
 		return err

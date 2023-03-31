@@ -9,25 +9,29 @@ import (
 	"net"
 )
 
-func LocalExec(method string, param any, result any, auth *Auth, handler HandlerFunc) error {
+func LocalExec(method string, param, result any, auth *Auth, handler HandlerFunc) error {
 	var err error
 
 	cliConn, srvConn := NewFConn()
 
-	context := CreateContext(cliConn)
-	context.reqRPC.Method = method
-	context.reqRPC.Params = param
-	context.reqRPC.Auth = auth
-	context.resRPC.Result = result
+	content := CreateContent(cliConn)
+	content.reqBlock.Method = method
 
-	if context.reqRPC.Params == nil {
-		context.reqRPC.Params = NewEmpty()
+	if param != nil {
+		content.reqBlock.Params = param
 	}
-	err = context.CreateRequest()
+	if auth != nil {
+		content.reqBlock.Auth = auth
+	}
+	if result != nil {
+		content.resBlock.Result = result
+	}
+
+	err = content.CreateRequest()
 	if err != nil {
 		return err
 	}
-	err = context.WriteRequest()
+	err = content.WriteRequest()
 	if err != nil {
 		return err
 	}
@@ -35,11 +39,11 @@ func LocalExec(method string, param any, result any, auth *Auth, handler Handler
 	if err != nil {
 		return err
 	}
-	err = context.ReadResponse()
+	err = content.ReadResponse()
 	if err != nil {
 		return err
 	}
-	err = context.BindResponse()
+	err = content.BindResponse()
 	if err != nil {
 		return err
 	}
@@ -53,29 +57,33 @@ func LocalPut(method string, reader io.Reader, size int64, param, result any, au
 
 	cliConn, srvConn := NewFConn()
 
-	context := CreateContext(cliConn)
-	context.reqRPC.Method = method
-	context.reqRPC.Params = param
-	context.reqRPC.Auth = auth
-	context.resRPC.Result = result
+	content := CreateContent(cliConn)
+	content.reqBlock.Method = method
 
-	context.binReader = reader
-	context.binWriter = cliConn
-
-	context.reqHeader.binSize = size
-
-	if context.reqRPC.Params == nil {
-		context.reqRPC.Params = NewEmpty()
+	if param != nil {
+		content.reqBlock.Params = param
 	}
-	err = context.CreateRequest()
+	if auth != nil {
+		content.reqBlock.Auth = auth
+	}
+	if result != nil {
+		content.resBlock.Result = result
+	}
+
+	content.binReader = reader
+	content.binWriter = cliConn
+
+	content.reqHeader.binSize = size
+
+	err = content.CreateRequest()
 	if err != nil {
 		return err
 	}
-	err = context.WriteRequest()
+	err = content.WriteRequest()
 	if err != nil {
 		return err
 	}
-	err = context.UploadBin()
+	err = content.UploadBin()
 	if err != nil {
 		return err
 	}
@@ -83,11 +91,11 @@ func LocalPut(method string, reader io.Reader, size int64, param, result any, au
 	if err != nil {
 		return err
 	}
-	err = context.ReadResponse()
+	err = content.ReadResponse()
 	if err != nil {
 		return err
 	}
-	err = context.BindResponse()
+	err = content.BindResponse()
 	if err != nil {
 		return err
 	}
@@ -99,23 +107,27 @@ func LocalGet(method string, writer io.Writer, param, result any, auth *Auth, ha
 
 	cliConn, srvConn := NewFConn()
 
-	context := CreateContext(cliConn)
-	context.reqRPC.Method = method
-	context.reqRPC.Params = param
-	context.reqRPC.Auth = auth
-	context.resRPC.Result = result
+	content := CreateContent(cliConn)
+	content.reqBlock.Method = method
 
-	context.binReader = cliConn
-	context.binWriter = writer
-
-	if context.reqRPC.Params == nil {
-		context.reqRPC.Params = NewEmpty()
+	if param != nil {
+		content.reqBlock.Params = param
 	}
-	err = context.CreateRequest()
+	if auth != nil {
+		content.reqBlock.Auth = auth
+	}
+	if result != nil {
+		content.resBlock.Result = result
+	}
+
+	content.binReader = cliConn
+	content.binWriter = writer
+
+	err = content.CreateRequest()
 	if err != nil {
 		return err
 	}
-	err = context.WriteRequest()
+	err = content.WriteRequest()
 	if err != nil {
 		return err
 	}
@@ -124,15 +136,15 @@ func LocalGet(method string, writer io.Writer, param, result any, auth *Auth, ha
 	if err != nil {
 		return err
 	}
-	err = context.ReadResponse()
+	err = content.ReadResponse()
 	if err != nil {
 		return err
 	}
-	err = context.DownloadBin()
+	err = content.DownloadBin()
 	if err != nil {
 		return err
 	}
-	err = context.BindResponse()
+	err = content.BindResponse()
 	if err != nil {
 		return err
 	}
@@ -141,22 +153,22 @@ func LocalGet(method string, writer io.Writer, param, result any, auth *Auth, ha
 
 func LocalService(conn net.Conn, handler HandlerFunc) error {
 	var err error
-	context := CreateContext(conn)
+	content := CreateContent(conn)
 
 	remoteAddr := conn.RemoteAddr().String()
 	remoteHost, _, _ := net.SplitHostPort(remoteAddr)
-	context.remoteHost = remoteHost
+	content.remoteHost = remoteHost
 
-	context.binReader = conn
-	context.binWriter = io.Discard
+	content.binReader = conn
+	content.binWriter = io.Discard
 
-	err = context.ReadRequest()
+	err = content.ReadRequest()
 	if err != nil {
 		return err
 	}
-	err = context.BindMethod()
+	err = content.BindMethod()
 	if err != nil {
 		return err
 	}
-	return handler(context)
+	return handler(content)
 }

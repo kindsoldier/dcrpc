@@ -8,22 +8,22 @@ import (
 	"time"
 )
 
-func LogRequest(context *Context) error {
+func LogRequest(content *Content) error {
 	var err error
-	logDebug("request:", string(context.reqRPC.JSON()))
-	return Err(err)
+	logDebug("request:", string(content.reqBlock.ToJson()))
+	return err
 }
 
-func LogResponse(context *Context) error {
+func LogResponse(content *Content) error {
 	var err error
-	logDebug("response:", string(context.resRPC.JSON()))
-	return Err(err)
+	logDebug("response:", string(content.resBlock.ToJson()))
+	return err
 }
 
-func LogAccess(context *Context) error {
+func LogAccess(content *Content) error {
 	var err error
-	execTime := time.Now().Sub(context.start)
-	login := string(context.AuthIdent())
-	logAccess(context.remoteHost, login, context.reqRPC.Method, execTime)
-	return Err(err)
+	execTime := time.Now().Sub(content.start)
+	login := string(content.AuthIdent())
+	logAccess(content.remoteHost, login, content.reqBlock.Method, execTime)
+	return err
 }
