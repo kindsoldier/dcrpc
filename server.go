@@ -232,9 +232,9 @@ func (content *Content) BinSize() int64 {
 	return content.reqHeader.binSize
 }
 
-func (content *Content) ReadBin(writer io.Writer) error {
+func (content *Content) ReadBin(ctx context.Context, writer io.Writer) error {
 	var err error
-	_, err = CopyBytes(content.sockReader, writer, content.reqHeader.binSize)
+	_, err = CopyBytes(ctx, content.sockReader, writer, content.reqHeader.binSize)
 	return err
 }
 

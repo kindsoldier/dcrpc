@@ -5,6 +5,7 @@
 package dsrpc
 
 import (
+	"context"
 	"io"
 	"net"
 )
@@ -27,11 +28,11 @@ func LocalExec(method string, param, result any, auth *Auth, handler HandlerFunc
 		content.resBlock.Result = result
 	}
 
-	err = content.CreateRequest()
+	err = content.createRequest()
 	if err != nil {
 		return err
 	}
-	err = content.WriteRequest()
+	err = content.writeRequest()
 	if err != nil {
 		return err
 	}
@@ -39,11 +40,11 @@ func LocalExec(method string, param, result any, auth *Auth, handler HandlerFunc
 	if err != nil {
 		return err
 	}
-	err = content.ReadResponse()
+	err = content.readResponse()
 	if err != nil {
 		return err
 	}
-	err = content.BindResponse()
+	err = content.bindResponse()
 	if err != nil {
 		return err
 	}
@@ -51,7 +52,7 @@ func LocalExec(method string, param, result any, auth *Auth, handler HandlerFunc
 	return err
 }
 
-func LocalPut(method string, reader io.Reader, size int64, param, result any, auth *Auth, handler HandlerFunc) error {
+func LocalPut(ctx context.Context, method string, reader io.Reader, size int64, param, result any, auth *Auth, handler HandlerFunc) error {
 
 	var err error
 
@@ -75,15 +76,15 @@ func LocalPut(method string, reader io.Reader, size int64, param, result any, au
 
 	content.reqHeader.binSize = size
 
-	err = content.CreateRequest()
+	err = content.createRequest()
 	if err != nil {
 		return err
 	}
-	err = content.WriteRequest()
+	err = content.writeRequest()
 	if err != nil {
 		return err
 	}
-	err = content.UploadBin()
+	err = content.uploadBin(ctx)
 	if err != nil {
 		return err
 	}
@@ -91,18 +92,18 @@ func LocalPut(method string, reader io.Reader, size int64, param, result any, au
 	if err != nil {
 		return err
 	}
-	err = content.ReadResponse()
+	err = content.readResponse()
 	if err != nil {
 		return err
 	}
-	err = content.BindResponse()
+	err = content.bindResponse()
 	if err != nil {
 		return err
 	}
 	return err
 }
 
-func LocalGet(method string, writer io.Writer, param, result any, auth *Auth, handler HandlerFunc) error {
+func LocalGet(ctx context.Context, method string, writer io.Writer, param, result any, auth *Auth, handler HandlerFunc) error {
 	var err error
 
 	cliConn, srvConn := NewFConn()
@@ -123,11 +124,11 @@ func LocalGet(method string, writer io.Writer, param, result any, auth *Auth, ha
 	content.binReader = cliConn
 	content.binWriter = writer
 
-	err = content.CreateRequest()
+	err = content.createRequest()
 	if err != nil {
 		return err
 	}
-	err = content.WriteRequest()
+	err = content.writeRequest()
 	if err != nil {
 		return err
 	}
@@ -136,15 +137,15 @@ func LocalGet(method string, writer io.Writer, param, result any, auth *Auth, ha
 	if err != nil {
 		return err
 	}
-	err = content.ReadResponse()
+	err = content.readResponse()
 	if err != nil {
 		return err
 	}
-	err = content.DownloadBin()
+	err = content.downloadBin(ctx)
 	if err != nil {
 		return err
 	}
-	err = content.BindResponse()
+	err = content.bindResponse()
 	if err != nil {
 		return err
 	}

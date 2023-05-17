@@ -2,6 +2,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/kindsoldier/dsrpc v1.1.2 h1:bFTIGpRSMq5OK1a3dHQxLPMxf6R+Ik15slkqNN0QrNE=
 github.com/kindsoldier/dsrpc v1.1.2/go.mod h1:KG8x2ZPid/hPJdhkUHtt1mDulWPVhj9fh/1XL3Z2xT8=
+github.com/kindsoldier/dsrpc v1.1.4 h1:F6e1K5C7C92jKGOrH4lF/XraLe5E2glsQTeVP9avYBE=
+github.com/kindsoldier/dsrpc v1.1.4/go.mod h1:KG8x2ZPid/hPJdhkUHtt1mDulWPVhj9fh/1XL3Z2xT8=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

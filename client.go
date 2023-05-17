@@ -5,6 +5,7 @@
 package dsrpc
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +15,7 @@ import (
 	encoder "github.com/vmihailenco/msgpack/v5"
 )
 
-func Put(address string, method string, reader io.Reader, binSize int64, param, result any, auth *Auth) error {
+func Put(ctx context.Context, address string, method string, reader io.Reader, binSize int64, param, result any, auth *Auth) error {
 	var err error
 
 	addr, err := net.ResolveTCPAddr("tcp", address)
@@ -28,10 +29,10 @@ func Put(address string, method string, reader io.Reader, binSize int64, param, 
 	}
 	defer conn.Close()
 
-	return ConnPut(conn, method, reader, binSize, param, result, auth)
+	return ConnPut(ctx, conn, method, reader, binSize, param, result, auth)
 }
 
-func ConnPut(conn net.Conn, method string, reader io.Reader, binSize int64, param, result any, auth *Auth) error {
+func ConnPut(ctx context.Context, conn net.Conn, method string, reader io.Reader, binSize int64, param, result any, auth *Auth) error {
 	var err error
 	content := CreateContent(conn)
 
@@ -51,11 +52,11 @@ func ConnPut(conn net.Conn, method string, reader io.Reader, binSize int64, para
 
 	content.reqHeader.binSize = binSize
 
-	err = content.CreateRequest()
+	err = content.createRequest()
 	if err != nil {
 		return err
 	}
-	err = content.WriteRequest()
+	err = content.writeRequest()
 	if err != nil {
 		return err
 	}
@@ -64,24 +65,24 @@ func ConnPut(conn net.Conn, method string, reader io.Reader, binSize int64, para
 	errChan := make(chan error, 1)
 
 	wg.Add(1)
-	go content.ReadResponseAsync(&wg, errChan)
+	go content.readResponseAsync(&wg, errChan)
 
 	wg.Add(1)
-	go content.UploadBinAsync(&wg)
+	go content.uploadBinAsync(ctx, &wg)
 
 	wg.Wait()
 	err = <-errChan
 	if err != nil {
 		return err
 	}
-	err = content.BindResponse()
+	err = content.bindResponse()
 	if err != nil {
 		return err
 	}
 	return err
 }
 
-func Get(address string, method string, writer io.Writer, param, result any, auth *Auth) error {
+func Get(ctx context.Context, address string, method string, writer io.Writer, param, result any, auth *Auth) error {
 	var err error
 
 	addr, err := net.ResolveTCPAddr("tcp", address)
@@ -95,10 +96,10 @@ func Get(address string, method string, writer io.Writer, param, result any, aut
 	}
 	defer conn.Close()
 
-	return ConnGet(conn, method, writer, param, result, auth)
+	return ConnGet(ctx, conn, method, writer, param, result, auth)
 }
 
-func ConnGet(conn net.Conn, method string, writer io.Writer, param, result any, auth *Auth) error {
+func ConnGet(ctx context.Context, conn net.Conn, method string, writer io.Writer, param, result any, auth *Auth) error {
 	var err error
 
 	content := CreateContent(conn)
@@ -116,30 +117,30 @@ func ConnGet(conn net.Conn, method string, writer io.Writer, param, result any, 
 	content.binReader = conn
 	content.binWriter = writer
 
-	err = content.CreateRequest()
+	err = content.createRequest()
 	if err != nil {
 		return err
 	}
-	err = content.WriteRequest()
+	err = content.writeRequest()
 	if err != nil {
 		return err
 	}
-	err = content.ReadResponse()
+	err = content.readResponse()
 	if err != nil {
 		return err
 	}
-	err = content.DownloadBin()
+	err = content.downloadBin(ctx)
 	if err != nil {
 		return err
 	}
-	err = content.BindResponse()
+	err = content.bindResponse()
 	if err != nil {
 		return err
 	}
 	return err
 }
 
-func Exec(address, method string, param any, result any, auth *Auth) error {
+func Exec(ctx context.Context, address, method string, param any, result any, auth *Auth) error {
 	var err error
 
 	addr, err := net.ResolveTCPAddr("tcp", address)
@@ -153,14 +154,14 @@ func Exec(address, method string, param any, result any, auth *Auth) error {
 	}
 	defer conn.Close()
 
-	err = ConnExec(conn, method, param, result, auth)
+	err = ConnExec(ctx, conn, method, param, result, auth)
 	if err != nil {
 		return err
 	}
 	return err
 }
 
-func ConnExec(conn net.Conn, method string, param any, result any, auth *Auth) error {
+func ConnExec(ctx context.Context, conn net.Conn, method string, param any, result any, auth *Auth) error {
 	var err error
 
 	content := CreateContent(conn)
@@ -176,26 +177,26 @@ func ConnExec(conn net.Conn, method string, param any, result any, auth *Auth) e
 		content.reqBlock.Auth = auth
 	}
 
-	err = content.CreateRequest()
+	err = content.createRequest()
 	if err != nil {
 		return err
 	}
-	err = content.WriteRequest()
+	err = content.writeRequest()
 	if err != nil {
 		return err
 	}
-	err = content.ReadResponse()
+	err = content.readResponse()
 	if err != nil {
 		return err
 	}
-	err = content.BindResponse()
+	err = content.bindResponse()
 	if err != nil {
 		return err
 	}
 	return err
 }
 
-func (content *Content) CreateRequest() error {
+func (content *Content) createRequest() error {
 	var err error
 
 	content.reqPacket.rcpPayload, err = content.reqBlock.Pack()
@@ -212,7 +213,7 @@ func (content *Content) CreateRequest() error {
 	return err
 }
 
-func (content *Content) WriteRequest() error {
+func (content *Content) writeRequest() error {
 	var err error
 	_, err = content.sockWriter.Write(content.reqPacket.header)
 	if err != nil {
@@ -225,13 +226,13 @@ func (content *Content) WriteRequest() error {
 	return err
 }
 
-func (content *Content) UploadBin() error {
+func (content *Content) uploadBin(ctx context.Context) error {
 	var err error
-	_, err = CopyBytes(content.binReader, content.binWriter, content.reqHeader.binSize)
+	_, err = CopyBytes(ctx, content.binReader, content.binWriter, content.reqHeader.binSize)
 	return err
 }
 
-func (content *Content) ReadResponse() error {
+func (content *Content) readResponse() error {
 	var err error
 
 	content.resPacket.header, err = ReadBytes(content.sockReader, headerSize)
@@ -250,16 +251,16 @@ func (content *Content) ReadResponse() error {
 	return err
 }
 
-func (content *Content) UploadBinAsync(wg *sync.WaitGroup) {
+func (content *Content) uploadBinAsync(ctx context.Context, wg *sync.WaitGroup) {
 	exitFunc := func() {
 		wg.Done()
 	}
 	defer exitFunc()
-	_, _ = CopyBytes(content.binReader, content.binWriter, content.reqHeader.binSize)
+	_, _ = CopyBytes(ctx, content.binReader, content.binWriter, content.reqHeader.binSize)
 	return
 }
 
-func (content *Content) ReadResponseAsync(wg *sync.WaitGroup, errChan chan error) {
+func (content *Content) readResponseAsync(wg *sync.WaitGroup, errChan chan error) {
 	var err error
 	exitFunc := func() {
 		errChan <- err
@@ -285,13 +286,13 @@ func (content *Content) ReadResponseAsync(wg *sync.WaitGroup, errChan chan error
 	return
 }
 
-func (content *Content) DownloadBin() error {
+func (content *Content) downloadBin(ctx context.Context) error {
 	var err error
-	_, err = CopyBytes(content.binReader, content.binWriter, content.resHeader.binSize)
+	_, err = CopyBytes(ctx, content.binReader, content.binWriter, content.resHeader.binSize)
 	return err
 }
 
-func (content *Content) BindResponse() error {
+func (content *Content) bindResponse() error {
 	var err error
 
 	err = encoder.Unmarshal(content.resPacket.rcpPayload, content.resBlock)

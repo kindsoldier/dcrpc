@@ -6,6 +6,7 @@ package dsrpc
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -66,7 +67,10 @@ func TestLocalSave(t *testing.T) {
 
 	reader := bytes.NewReader(binBytes)
 
-	err = LocalPut(SaveMethod, reader, binSize, &params, &result, auth, saveHandler)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
+	defer cancel()
+
+	err = LocalPut(ctx, SaveMethod, reader, binSize, &params, &result, auth, saveHandler)
 	require.NoError(t, err)
 
 	resultJson, _ := json.Marshal(result)
@@ -84,7 +88,10 @@ func TestLocalLoad(t *testing.T) {
 	binBytes := make([]byte, 0)
 	writer := bytes.NewBuffer(binBytes)
 
-	err = LocalGet(LoadMethod, writer, &params, &result, auth, loadHandler)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
+	defer cancel()
+
+	err = LocalGet(ctx, LoadMethod, writer, &params, &result, auth, loadHandler)
 	require.NoError(t, err)
 
 	resultJson, _ := json.Marshal(result)
@@ -141,7 +148,10 @@ func clientHello() error {
 	binBytes := make([]byte, binSize)
 	rand.Read(binBytes)
 
-	err = Exec("127.0.0.1:8081", HelloMethod, &params, &result, auth)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
+	defer cancel()
+
+	err = Exec(ctx, "127.0.0.1:8081", HelloMethod, &params, &result, auth)
 	if err != nil {
 		logError("method err:", err)
 		return err
@@ -166,7 +176,10 @@ func clientSave() error {
 
 	reader := bytes.NewReader(binBytes)
 
-	err = Put("127.0.0.1:8081", SaveMethod, reader, binSize, &params, &result, auth)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
+	defer cancel()
+
+	err = Put(ctx, "127.0.0.1:8081", SaveMethod, reader, binSize, &params, &result, auth)
 	if err != nil {
 		logError("method err:", err)
 		return err
@@ -187,7 +200,10 @@ func clientLoad() error {
 	binBytes := make([]byte, 0)
 	writer := bytes.NewBuffer(binBytes)
 
-	err = Get("127.0.0.1:8081", LoadMethod, writer, &params, &result, auth)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
+	defer cancel()
+
+	err = Get(ctx, "127.0.0.1:8081", LoadMethod, writer, &params, &result, auth)
 	if err != nil {
 		logError("method err:", err)
 		return err
@@ -261,7 +277,10 @@ func helloHandler(content *Content) error {
 		return err
 	}
 
-	err = content.ReadBin(io.Discard)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
+	defer cancel()
+
+	err = content.ReadBin(ctx, io.Discard)
 	if err != nil {
 		content.SendError(err)
 		return err
@@ -289,7 +308,10 @@ func saveHandler(content *Content) error {
 	bufferBytes := make([]byte, 0, 1024)
 	binWriter := bytes.NewBuffer(bufferBytes)
 
-	err = content.ReadBin(binWriter)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
+	defer cancel()
+
+	err = content.ReadBin(ctx, binWriter)
 	if err != nil {
 		content.SendError(err)
 		return err
@@ -314,7 +336,10 @@ func loadHandler(content *Content) error {
 		return err
 	}
 
-	err = content.ReadBin(io.Discard)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
+	defer cancel()
+
+	err = content.ReadBin(ctx, io.Discard)
 	if err != nil {
 		content.SendError(err)
 		return err
@@ -334,8 +359,9 @@ func loadHandler(content *Content) error {
 	if err != nil {
 		return err
 	}
+
 	binWriter := content.BinWriter()
-	_, err = CopyBytes(binReader, binWriter, binSize)
+	_, err = CopyBytes(ctx, binReader, binWriter, binSize)
 	if err != nil {
 		return err
 	}

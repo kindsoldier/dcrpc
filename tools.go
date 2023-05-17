@@ -5,6 +5,7 @@
 package dsrpc
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -16,7 +17,7 @@ func ReadBytes(reader io.Reader, size int64) ([]byte, error) {
 	return buffer[0:read], err
 }
 
-func CopyBytes(reader io.Reader, writer io.Writer, dataSize int64) (int64, error) {
+func CopyBytes(ctx context.Context, reader io.Reader, writer io.Writer, dataSize int64) (int64, error) {
 	var err error
 	var bSize int64 = 1024 * 16
 	var total int64 = 0
@@ -24,6 +25,12 @@ func CopyBytes(reader io.Reader, writer io.Writer, dataSize int64) (int64, error
 	buffer := make([]byte, bSize)
 
 	for {
+		select {
+		case <-ctx.Done():
+			return total, errors.New("break by context")
+		default:
+		}
+
 		if reader == nil {
 			return total, errors.New("reader is nil")
 		}

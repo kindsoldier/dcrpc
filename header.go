@@ -44,16 +44,16 @@ func (hdr *Header) Pack() ([]byte, error) {
 	headerBytes := make([]byte, 0, headerSize)
 	headerBuffer := bytes.NewBuffer(headerBytes)
 
-	magicCodeABytes := encoderI64(hdr.magicCodeA)
+	magicCodeABytes := EncoderI64(hdr.magicCodeA)
 	headerBuffer.Write(magicCodeABytes)
 
-	rpcSizeBytes := encoderI64(hdr.rpcSize)
+	rpcSizeBytes := EncoderI64(hdr.rpcSize)
 	headerBuffer.Write(rpcSizeBytes)
 
-	binSizeBytes := encoderI64(hdr.binSize)
+	binSizeBytes := EncoderI64(hdr.binSize)
 	headerBuffer.Write(binSizeBytes)
 
-	magicCodeBBytes := encoderI64(hdr.magicCodeB)
+	magicCodeBBytes := EncoderI64(hdr.magicCodeB)
 	headerBuffer.Write(magicCodeBBytes)
 
 	return headerBuffer.Bytes(), err
@@ -77,10 +77,10 @@ func UnpackHeader(headerBytes []byte) (*Header, error) {
 	headerReader.Read(magicCodeBBytes)
 
 	header := &Header{
-		magicCodeA: decoderI64(magicCodeABytes),
-		rpcSize:    decoderI64(rpcSizeBytes),
-		binSize:    decoderI64(binSizeBytes),
-		magicCodeB: decoderI64(magicCodeBBytes),
+		magicCodeA: DecoderI64(magicCodeABytes),
+		rpcSize:    DecoderI64(rpcSizeBytes),
+		binSize:    DecoderI64(binSizeBytes),
+		magicCodeB: DecoderI64(magicCodeBBytes),
 	}
 
 	if header.magicCodeA != magicCodeA || header.magicCodeB != magicCodeB {
@@ -90,12 +90,12 @@ func UnpackHeader(headerBytes []byte) (*Header, error) {
 	return header, err
 }
 
-func encoderI64(i int64) []byte {
+func EncoderI64(i int64) []byte {
 	buffer := make([]byte, sizeOfInt64)
 	binary.BigEndian.PutUint64(buffer, uint64(i))
 	return buffer
 }
 
-func decoderI64(b []byte) int64 {
+func DecoderI64(b []byte) int64 {
 	return int64(binary.BigEndian.Uint64(b))
 }
