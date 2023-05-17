@@ -52,7 +52,7 @@ func (svc *Service) PostMiddleware(mw HandlerFunc) {
 	svc.postMw = append(svc.postMw, mw)
 }
 
-func (svc *Service) Handler(method string, handler HandlerFunc) {
+func (svc *Service) Handle(method string, handler HandlerFunc) {
 	svc.handlers[method] = handler
 }
 
