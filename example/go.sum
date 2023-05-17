@@ -4,6 +4,8 @@ github.com/kindsoldier/dsrpc v1.1.2 h1:bFTIGpRSMq5OK1a3dHQxLPMxf6R+Ik15slkqNN0Qr
 github.com/kindsoldier/dsrpc v1.1.2/go.mod h1:KG8x2ZPid/hPJdhkUHtt1mDulWPVhj9fh/1XL3Z2xT8=
 github.com/kindsoldier/dsrpc v1.1.4 h1:F6e1K5C7C92jKGOrH4lF/XraLe5E2glsQTeVP9avYBE=
 github.com/kindsoldier/dsrpc v1.1.4/go.mod h1:KG8x2ZPid/hPJdhkUHtt1mDulWPVhj9fh/1XL3Z2xT8=
+github.com/kindsoldier/dsrpc v1.2.0 h1:5ZAFeqo6qyFm0OzPZEpabgf49/yMSA1ZKnOhHr4R/5c=
+github.com/kindsoldier/dsrpc v1.2.0/go.mod h1:KG8x2ZPid/hPJdhkUHtt1mDulWPVhj9fh/1XL3Z2xT8=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

@@ -7,33 +7,40 @@
 package main
 
 import (
-    "fmt"
-    "github.com/kindsoldier/dsrpc"
-    "netsrv/api"
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/kindsoldier/dsrpc"
+
+	"netsrv/api"
 )
 
 func main() {
 
-    err := exec()
-    if err != nil {
-        fmt.Println("exec err:", err)
-    }
+	err := exec()
+	if err != nil {
+		fmt.Println("exec err:", err)
+	}
 }
 
 func exec() error {
-    var err error
+	var err error
 
-    params := api.HelloParams{
-        Message: "hello, server!",
-    }
+	params := api.HelloParams{
+		Message: "hello, server!",
+	}
 
-    result := api.HelloResult{}
+	result := api.HelloResult{}
 
-    err = dsrpc.Exec("127.0.0.1:8081", api.HelloMethod, &params, &result, nil)
-    if err != nil {
-        return err
-    }
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5*time.Second))
+	defer cancel()
 
-    fmt.Println("result:", result.Message)
-    return err
+	err = dsrpc.Exec(ctx, "127.0.0.1:8081", api.HelloMethod, &params, &result, nil)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("result:", result.Message)
+	return err
 }
