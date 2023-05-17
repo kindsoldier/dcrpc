@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	encoder "github.com/vmihailenco/msgpack/v5"
+	encoder "encoding/json"
 )
 
 type HandlerFunc = func(*Content) error

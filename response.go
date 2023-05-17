@@ -7,7 +7,7 @@ package dsrpc
 import (
 	"encoding/json"
 
-	encoder "github.com/vmihailenco/msgpack/v5"
+	encoder "encoding/json"
 )
 
 type EmptyResult struct{}

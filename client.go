@@ -12,7 +12,7 @@ import (
 	"net"
 	"sync"
 
-	encoder "github.com/vmihailenco/msgpack/v5"
+	encoder "encoding/json"
 )
 
 func Put(ctx context.Context, address string, method string, reader io.Reader, binSize int64, param, result any, auth *Auth) error {
