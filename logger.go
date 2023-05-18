@@ -10,41 +10,27 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 )
 
 var (
 	messageWriter io.Writer = os.Stdout
 	accessWriter  io.Writer = os.Stdout
-	logTimestamp  bool      = false
 )
 
-func getLogStamp() string {
-	var stamp string
-	if logTimestamp {
-		stamp = time.Now().Format(time.RFC3339)
-	}
-	return stamp
-}
-
 func logDebug(messages ...any) {
-	stamp := getLogStamp()
-	fmt.Fprintln(messageWriter, stamp, "debug", messages)
+	fmt.Fprintln(messageWriter, "debug:", messages)
 }
 
 func logInfo(messages ...any) {
-	stamp := getLogStamp()
-	fmt.Fprintln(messageWriter, stamp, "info", messages)
+	fmt.Fprintln(messageWriter, "info:", messages)
 }
 
 func logError(messages ...any) {
-	stamp := getLogStamp()
-	fmt.Fprintln(messageWriter, stamp, "error", messages)
+	fmt.Fprintln(messageWriter, "error:", messages)
 }
 
 func logAccess(messages ...any) {
-	stamp := getLogStamp()
-	fmt.Fprintln(accessWriter, stamp, "access", messages)
+	fmt.Fprintln(accessWriter, "access:", messages)
 }
 
 func SetAccessWriter(writer io.Writer) {
@@ -54,8 +40,3 @@ func SetAccessWriter(writer io.Writer) {
 func SetMessageWriter(writer io.Writer) {
 	messageWriter = writer
 }
-
-func EnableLogTimestamp(enable bool) {
-	logTimestamp = enable
-}
-
