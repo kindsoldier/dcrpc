@@ -26,7 +26,7 @@ func server() error {
     serv := dsrpc.NewService()
 
     cont := NewController()
-    serv.Handler(api.HelloMethod, cont.HelloHandler)
+    serv.Handle(api.HelloMethod, cont.HelloHandler)
 
     serv.PreMiddleware(dsrpc.LogRequest)
     serv.PostMiddleware(dsrpc.LogResponse)

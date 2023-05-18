@@ -44,7 +44,7 @@ func server() error {
     serv := dsrpc.NewService()
 
     cont := NewController()
-    serv.Handler(api.HelloMethod, cont.HelloHandler)
+    serv.Handle(api.HelloMethod, cont.HelloHandler)
 
     serv.PreMiddleware(dsrpc.LogRequest)
     serv.PostMiddleware(dsrpc.LogResponse)
@@ -220,9 +220,9 @@ func sampleServ(quiet bool) error {
     serv.PreMiddleware(authMiddleware)
     serv.PreMiddleware(dsrpc.LogRequest)
 
-    serv.Handler(HelloMethod, helloHandler)
-    serv.Handler(SaveMethod, saveHandler)
-    serv.Handler(LoadMethod, loadHandler)
+    serv.Handle(HelloMethod, helloHandler)
+    serv.Handle(SaveMethod, saveHandler)
+    serv.Handle(LoadMethod, loadHandler)
 
     serv.PostMiddleware(dsrpc.LogResponse)
     serv.PostMiddleware(dsrpc.LogAccess)

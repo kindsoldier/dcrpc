@@ -229,9 +229,9 @@ func testServ(quiet bool) error {
 		SetMessageWriter(io.Discard)
 	}
 	serv := NewService()
-	serv.Handler(HelloMethod, helloHandler)
-	serv.Handler(SaveMethod, saveHandler)
-	serv.Handler(LoadMethod, loadHandler)
+	serv.Handle(HelloMethod, helloHandler)
+	serv.Handle(SaveMethod, saveHandler)
+	serv.Handle(LoadMethod, loadHandler)
 
 	serv.PreMiddleware(LogRequest)
 	serv.PreMiddleware(auth)

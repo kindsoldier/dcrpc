@@ -119,7 +119,7 @@ func (svc *Service) ListenTLS(address string, tlsConfig *tls.Config) error {
                 }
                 select {
                 case <-svc.ctx.Done():
-                        logMessage("accept loop done")
+                        logInfo("accept loop done")
                         return err
                 default:
                 }
