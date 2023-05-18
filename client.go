@@ -6,6 +6,7 @@ package dsrpc
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -24,6 +25,18 @@ func Put(ctx context.Context, address string, method string, reader io.Reader, b
 		return err
 	}
 	conn, err := net.DialTCP("tcp", nil, addr)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	return ConnPut(ctx, conn, method, reader, binSize, param, result, auth)
+}
+
+func PutTLS(ctx context.Context, tlsConfig *tls.Config, address string, method string, reader io.Reader, binSize int64, param, result any, auth *Auth) error {
+	var err error
+
+	conn, err := tls.Dial("tcp", address, tlsConfig)
 	if err != nil {
 		return err
 	}
@@ -99,6 +112,18 @@ func Get(ctx context.Context, address string, method string, writer io.Writer, p
 	return ConnGet(ctx, conn, method, writer, param, result, auth)
 }
 
+func GetTLS(ctx context.Context, tlsConfig *tls.Config, address string, method string, writer io.Writer, param, result any, auth *Auth) error {
+	var err error
+
+	conn, err := tls.Dial("tcp", address, tlsConfig)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	return ConnGet(ctx, conn, method, writer, param, result, auth)
+}
+
 func ConnGet(ctx context.Context, conn net.Conn, method string, writer io.Writer, param, result any, auth *Auth) error {
 	var err error
 
@@ -149,6 +174,22 @@ func Exec(ctx context.Context, address, method string, param any, result any, au
 		return err
 	}
 	conn, err := net.DialTCP("tcp", nil, addr)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	err = ConnExec(ctx, conn, method, param, result, auth)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func ExecTLS(ctx context.Context, tlsConfig *tls.Config, address, method string, param any, result any, auth *Auth) error {
+	var err error
+
+	conn, err := tls.Dial("tcp", address, tlsConfig)
 	if err != nil {
 		return err
 	}
